@@ -1,0 +1,34 @@
+import express, { type ErrorRequestHandler } from 'express';
+import { resolve } from 'node:path';
+import { openDb } from './db.js';
+import { HttpError } from './http.js';
+import { pagosRouter } from './casos/01-pagos.js';
+import { ciudadesRouter } from './casos/02-ciudades.js';
+import { contactosRouter } from './casos/03-contactos.js';
+import { notificacionesRouter } from './casos/04-notificaciones.js';
+import { actividadesRouter } from './casos/05-actividades.js';
+import { crmLecturaRouter } from './crm-lectura.js';
+const db = await openDb(resolve(process.env.DB_PATH ?? 'data/lab.sqlite'));
+const app = express();
+app.use(express.json({ limit: '32kb' }));
+app.get('/health', (_req, res) => res.json({ ok: true }));
+app.use('/pagos', pagosRouter(db));
+app.use('/cities', ciudadesRouter());
+app.use('/agencias', contactosRouter(db));
+app.use('/notifications', notificacionesRouter(db));
+app.use('/crm', crmLecturaRouter(db));
+app.use('/crm', actividadesRouter(db));
+app.use((_req, res) => res.status(404).json({ error: 'Ruta no encontrada' }));
+const errors: ErrorRequestHandler = (error, _req, res, _next) => {
+  const status = error instanceof HttpError ? error.status : error.status === 400 ? 400 : 500;
+  if (status === 500) console.error(error);
+  res.status(status).json({ error: status === 500 ? 'Error interno' : error.message });
+};
+app.use(errors);
+const server = app.listen(Number(process.env.PORT ?? 3000), '127.0.0.1', () => {
+  const address = server.address();
+  if (address && typeof address !== 'string') console.log(`APPTIVA_READY=http://127.0.0.1:${address.port}`);
+});
+const stop = () => server.close(() => { db.close(); process.exit(0); });
+process.on('SIGTERM', stop);
+process.on('SIGINT', stop);
