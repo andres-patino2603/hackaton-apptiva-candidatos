@@ -1,5 +1,6 @@
 import express, { type ErrorRequestHandler } from 'express';
 import { resolve } from 'node:path';
+import { readFileSync } from 'node:fs';
 import { openDb } from './db.js';
 import { HttpError } from './http.js';
 import { pagosRouter } from './casos/01-pagos.js';
@@ -11,6 +12,10 @@ import { crmLecturaRouter } from './crm-lectura.js';
 const db = await openDb(resolve(process.env.DB_PATH ?? 'data/lab.sqlite'));
 const app = express();
 app.use(express.json({ limit: '32kb' }));
+app.get('/', (_req, res) => {
+  const html = readFileSync(new URL('./endpoints/welcome.html', import.meta.url), 'utf8');
+  res.setHeader('Content-Type', 'text/html; charset=utf-8').send(html);
+});
 app.get('/health', (_req, res) => res.json({ ok: true }));
 app.use('/pagos', pagosRouter(db));
 app.use('/cities', ciudadesRouter());

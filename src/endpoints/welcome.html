@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Hackatón Apptiva — API Lab</title>
+  <style>
+    /* ── Reset & base ── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:        #080c14;
+      --surface:   rgba(255,255,255,0.045);
+      --border:    rgba(255,255,255,0.09);
+      --green:     #10b981;
+      --green-dim: rgba(16,185,129,0.18);
+      --blue:      #6366f1;
+      --blue-dim:  rgba(99,102,241,0.15);
+      --text:      #e2e8f0;
+      --muted:     #64748b;
+      --font:      'Inter', system-ui, -apple-system, sans-serif;
+    }
+
+    html, body {
+      min-height: 100vh;
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font);
+      overflow-x: hidden;
+    }
+
+    /* ── Background mesh ── */
+    body::before {
+      content: '';
+      position: fixed; inset: 0; z-index: 0;
+      background:
+        radial-gradient(ellipse 80% 60% at 20% 10%, rgba(99,102,241,0.12) 0%, transparent 60%),
+        radial-gradient(ellipse 60% 50% at 80% 80%, rgba(16,185,129,0.10) 0%, transparent 55%);
+      pointer-events: none;
+    }
+
+    /* ── Layout ── */
+    .page {
+      position: relative; z-index: 1;
+      min-height: 100vh;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      padding: 2rem 1.25rem;
+      gap: 2rem;
+    }
+
+    /* ── Card principal ── */
+    .card {
+      width: 100%; max-width: 680px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 1.25rem;
+      padding: 2.5rem 2.25rem;
+      backdrop-filter: blur(18px);
+      -webkit-backdrop-filter: blur(18px);
+      box-shadow:
+        0 0 0 1px rgba(255,255,255,0.04) inset,
+        0 24px 64px rgba(0,0,0,0.45);
+    }
+
+    /* ── Header ── */
+    .header {
+      display: flex; align-items: center; gap: 1rem;
+      margin-bottom: 1.75rem;
+    }
+    .logo {
+      width: 44px; height: 44px; flex-shrink: 0;
+      background: linear-gradient(135deg, var(--blue) 0%, var(--green) 100%);
+      border-radius: 0.75rem;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.25rem;
+    }
+    .header-text h1 {
+      font-size: 1.35rem; font-weight: 700; letter-spacing: -0.02em;
+      color: #f1f5f9;
+    }
+    .header-text p {
+      font-size: 0.8rem; color: var(--muted); margin-top: 0.15rem;
+    }
+
+    /* ── Status badge ── */
+    .status {
+      display: inline-flex; align-items: center; gap: 0.55rem;
+      background: var(--green-dim);
+      border: 1px solid rgba(16,185,129,0.3);
+      border-radius: 99px;
+      padding: 0.35rem 0.9rem;
+      font-size: 0.8rem; font-weight: 500; color: var(--green);
+      margin-bottom: 1.75rem;
+    }
+    .dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      background: var(--green);
+      box-shadow: 0 0 0 0 rgba(16,185,129,0.6);
+      animation: pulse 2s ease-in-out infinite;
+    }
+    @keyframes pulse {
+      0%   { box-shadow: 0 0 0 0   rgba(16,185,129,0.6); }
+      50%  { box-shadow: 0 0 0 6px rgba(16,185,129,0);   }
+      100% { box-shadow: 0 0 0 0   rgba(16,185,129,0);   }
+    }
+
+    /* ── Descripción ── */
+    .desc {
+      font-size: 0.9rem; color: var(--muted);
+      line-height: 1.65; margin-bottom: 2rem;
+    }
+    .desc strong { color: #94a3b8; font-weight: 500; }
+
+    /* ── Sección de endpoints ── */
+    .section-title {
+      font-size: 0.7rem; font-weight: 600; letter-spacing: 0.1em;
+      text-transform: uppercase; color: var(--muted);
+      margin-bottom: 0.9rem;
+    }
+
+    .endpoints {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+      gap: 0.75rem;
+      margin-bottom: 2rem;
+    }
+
+    .ep {
+      background: rgba(255,255,255,0.03);
+      border: 1px solid var(--border);
+      border-radius: 0.75rem;
+      padding: 0.85rem 1rem;
+      text-decoration: none;
+      color: var(--text);
+      display: flex; flex-direction: column; gap: 0.3rem;
+      transition: background 0.18s, border-color 0.18s, transform 0.15s;
+      cursor: pointer;
+    }
+    .ep:hover {
+      background: rgba(255,255,255,0.07);
+      border-color: rgba(255,255,255,0.18);
+      transform: translateY(-2px);
+    }
+    .ep-method {
+      font-size: 0.65rem; font-weight: 700; letter-spacing: 0.06em;
+      padding: 0.2rem 0.45rem; border-radius: 4px;
+      display: inline-block; width: fit-content;
+    }
+    .get  { background: rgba(16,185,129,0.18); color: #6ee7b7; }
+    .post { background: rgba(99,102,241,0.2);  color: #a5b4fc; }
+    .ep-path {
+      font-size: 0.78rem; font-weight: 600; color: #cbd5e1;
+      font-family: 'SF Mono', 'Fira Code', monospace;
+      word-break: break-all;
+    }
+    .ep-desc { font-size: 0.72rem; color: var(--muted); line-height: 1.4; }
+
+    /* ── Info row ── */
+    .info-row {
+      display: flex; gap: 1rem; flex-wrap: wrap;
+      padding-top: 1.5rem;
+      border-top: 1px solid var(--border);
+    }
+    .info-chip {
+      display: flex; align-items: center; gap: 0.4rem;
+      font-size: 0.75rem; color: var(--muted);
+    }
+    .info-chip span { font-size: 0.9rem; }
+
+    /* ── Health check live ── */
+    #health-result {
+      font-size: 0.72rem; color: var(--muted);
+      margin-left: auto; white-space: nowrap;
+    }
+    #health-result.ok    { color: var(--green); }
+    #health-result.error { color: #f87171; }
+
+    /* ── Footer ── */
+    footer {
+      font-size: 0.72rem; color: var(--muted); text-align: center;
+      opacity: 0.6;
+    }
+
+    /* ── Responsive ── */
+    @media (max-width: 480px) {
+      .card { padding: 1.75rem 1.25rem; }
+      .header-text h1 { font-size: 1.1rem; }
+      .endpoints { grid-template-columns: 1fr 1fr; }
+    }
+  </style>
+</head>
+<body>
+<div class="page">
+
+  <div class="card">
+
+    <!-- Header -->
+    <div class="header">
+      <div class="logo">⚡</div>
+      <div class="header-text">
+        <h1>Hackatón Apptiva</h1>
+        <p>API Lab — Humberto Hernando Diaz Rada</p>
+      </div>
+    </div>
+
+    <!-- Status -->
+    <div class="status">
+      <div class="dot"></div>
+      Servidor activo
+    </div>
+
+    <!-- Descripción -->
+    <p class="desc">
+      Entorno de evaluación con <strong>SQLite embebido</strong>. Cada arranque crea la base
+      de datos automáticamente. Envía el header <strong>x-user</strong> con
+      <code style="color:#a5b4fc;font-size:0.85em">admin</code>,
+      <code style="color:#a5b4fc;font-size:0.85em">asesor-a</code>,
+      <code style="code;color:#a5b4fc;font-size:0.85em">asesor-b</code> o
+      <code style="color:#a5b4fc;font-size:0.85em">analista</code> en las rutas protegidas.
+    </p>
+
+    <!-- Endpoints -->
+    <p class="section-title">Endpoints principales</p>
+    <div class="endpoints">
+
+      <a class="ep" href="/health" target="_blank">
+        <span class="ep-method get">GET</span>
+        <span class="ep-path">/health</span>
+        <span class="ep-desc">Verificación de infraestructura</span>
+      </a>
+
+      <a class="ep" href="/pagos/historial" target="_blank">
+        <span class="ep-method get">GET</span>
+        <span class="ep-path">/pagos/historial</span>
+        <span class="ep-desc">Historial paginado de pagos</span>
+      </a>
+
+      <a class="ep" href="/cities?q=bogota" target="_blank">
+        <span class="ep-method get">GET</span>
+        <span class="ep-path">/cities</span>
+        <span class="ep-desc">Buscador de ciudades</span>
+      </a>
+
+      <a class="ep" href="/agencias/1/asesores" target="_blank">
+        <span class="ep-method get">GET</span>
+        <span class="ep-path">/agencias/:id/asesores</span>
+        <span class="ep-desc">Directorio de contactos</span>
+      </a>
+
+      <a class="ep" href="/notifications" target="_blank">
+        <span class="ep-method get">GET</span>
+        <span class="ep-path">/notifications</span>
+        <span class="ep-desc">Centro de notificaciones</span>
+      </a>
+
+      <a class="ep" href="/crm/registros/r1/resumen" target="_blank">
+        <span class="ep-method get">GET</span>
+        <span class="ep-path">/crm/registros/:id/resumen</span>
+        <span class="ep-desc">Resumen CRM del registro</span>
+      </a>
+
+      <div class="ep" style="cursor:default">
+        <span class="ep-method post">POST</span>
+        <span class="ep-path">/crm/registros/:id/actividades</span>
+        <span class="ep-desc">Registrar actividad comercial</span>
+      </div>
+
+      <div class="ep" style="cursor:default">
+        <span class="ep-method post">POST</span>
+        <span class="ep-path">/notifications/read-all</span>
+        <span class="ep-desc">Marcar todas como leídas</span>
+      </div>
+
+    </div>
+
+    <!-- Info row -->
+    <div class="info-row">
+      <div class="info-chip"><span>🗄️</span> SQLite embebido</div>
+      <div class="info-chip"><span>🔑</span> x-user header</div>
+      <div class="info-chip"><span>📦</span> Node.js + Express</div>
+      <div id="health-result">Verificando…</div>
+    </div>
+
+  </div>
+
+  <footer>Hackatón Apptiva · Entorno de evaluación · Solo localhost</footer>
+
+</div>
+
+<script>
+  // Health check automático al cargar
+  (async () => {
+    const el = document.getElementById('health-result');
+    try {
+      const r = await fetch('/health', { signal: AbortSignal.timeout(3000) });
+      const d = await r.json();
+      if (d.ok) {
+        el.textContent = '✓ /health OK';
+        el.className = 'ok';
+      } else {
+        el.textContent = '⚠ /health responde pero ok≠true';
+        el.className = 'error';
+      }
+    } catch {
+      el.textContent = '✗ /health no responde';
+      el.className = 'error';
+    }
+  })();
+</script>
+</body>
+</html>
