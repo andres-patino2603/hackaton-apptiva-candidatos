@@ -1,0 +1,431 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Panel de laboratorio</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;700&family=Hanken+Grotesk:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --canvas:#f2f4f8;--panel:#fff;--ink:#111c33;--mut:#5d6b82;--line:#dfe4ec;--soft:#eef1f7;
+    --rail:#0f1a30;--rail-ink:#d5dcec;--rail-mut:#8190ab;--rail-on:#1c2b4a;
+    --ok:#0f7a4d;--okbg:#e3f5ec;--err:#b3261e;--errbg:#fdeceb;--warn:#8a5a00;--warnbg:#fff3d6;
+    --m:#0e9f6e;
+    --head:'Bricolage Grotesque','Hanken Grotesk',system-ui,sans-serif;
+    --body:'Hanken Grotesk',system-ui,'Segoe UI',sans-serif;
+    --mono:ui-monospace,'Cascadia Mono',Consolas,monospace;
+  }
+  @media (prefers-color-scheme:dark){:root{
+    --canvas:#0b1120;--panel:#121a2d;--ink:#e7ecf6;--mut:#93a0b8;--line:#232e45;--soft:#19233a;
+    --rail:#080d19;--rail-on:#16213a;
+    --ok:#5ad49b;--okbg:#12301f;--err:#ff8f87;--errbg:#3a1a18;--warn:#f2c14e;--warnbg:#3a2e10;
+  }}
+  [data-m=pagos]{--m:#0e9f6e}[data-m=ciudades]{--m:#2b6ce4}[data-m=contactos]{--m:#7a4de8}
+  [data-m=notif]{--m:#e8590c}[data-m=act]{--m:#d6336c}
+  *{box-sizing:border-box}
+  html{color-scheme:light dark}
+  body{margin:0;background:var(--canvas);color:var(--ink);font:15px/1.5 var(--body)}
+  :focus-visible{outline:2px solid var(--m);outline-offset:2px}
+
+  .app{display:grid;grid-template-columns:248px minmax(0,1fr) 360px;min-height:100vh}
+  body.nolog .app{grid-template-columns:248px minmax(0,1fr) 0}
+  body.nolog .log{display:none}
+
+  /* barra lateral */
+  .rail{background:var(--rail);color:var(--rail-ink);padding:20px 14px;position:sticky;top:0;height:100vh;overflow:auto;display:flex;flex-direction:column;gap:22px}
+  .brand{font:700 18px/1.1 var(--head);color:#fff;padding:0 8px}
+  .brand small{display:block;font:400 12px var(--body);color:var(--rail-mut);margin-top:4px}
+  .rail h3{margin:0 8px 8px;font:600 13px var(--body);color:var(--rail-mut)}
+  .who,.mods{display:flex;flex-direction:column;gap:2px}
+  .who button,.mods button{display:flex;align-items:center;gap:10px;width:100%;text-align:left;border:0;background:transparent;color:var(--rail-ink);padding:8px;border-radius:8px;cursor:pointer;font:inherit}
+  .who button:hover,.mods button:hover{background:var(--rail-on)}
+  .who button[aria-pressed=true],.mods button[aria-selected=true]{background:var(--rail-on);box-shadow:inset 3px 0 0 var(--c,#fff)}
+  .av{width:30px;height:30px;border-radius:50%;display:grid;place-items:center;font:600 12px var(--body);background:#2a3a5c;color:#fff;flex:none}
+  .who button[aria-pressed=true] .av{background:#fff;color:#0f1a30}
+  .who small{display:block;color:var(--rail-mut);font-size:12px}
+  .dot{width:10px;height:10px;border-radius:3px;background:var(--c);flex:none}
+  .bd{margin-left:auto;background:var(--m);color:#fff;font:600 12px var(--body);border-radius:99px;padding:0 7px;min-width:20px;text-align:center}
+  .bd:empty{display:none}
+
+  /* centro */
+  main{padding:28px 32px 48px;min-width:0}
+  section{display:none}section.on{display:block}
+  .head{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:10px;margin-bottom:16px;border-left:5px solid var(--m);padding-left:14px}
+  h2{margin:0;font:700 28px/1.1 var(--head);letter-spacing:-.01em}
+  .head p{margin:4px 0 0;color:var(--mut)}
+  .route{font:12px var(--mono);background:var(--soft);color:var(--mut);padding:4px 8px;border-radius:6px}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;margin-bottom:16px;overflow:hidden}
+  .bar{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end;padding:14px 16px;border-bottom:1px solid var(--line)}
+  .pad{padding:14px 16px}
+  label{display:flex;flex-direction:column;gap:4px;font-size:13px;color:var(--mut)}
+  input,select,textarea,button{font:inherit}
+  input,select,textarea{padding:8px 10px;border:1px solid var(--line);border-radius:6px;background:var(--canvas);color:var(--ink);min-width:0}
+  textarea{width:100%;min-height:84px;resize:vertical}
+  button{cursor:pointer}
+  .b{background:var(--m);color:#fff;border:0;border-radius:6px;padding:9px 16px;font-weight:600}
+  .b:hover{filter:brightness(1.08)}
+  .s{background:var(--soft);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:6px 11px}
+  .s:hover{border-color:var(--m)}
+  .d{background:var(--errbg);color:var(--err);border:0;border-radius:6px;padding:6px 11px;font-weight:500}
+  .tw{overflow-x:auto}
+  table{width:100%;border-collapse:collapse}
+  th,td{text-align:left;padding:10px 16px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{font:600 13px var(--body);color:var(--mut);background:var(--soft);white-space:nowrap}
+  tbody tr:last-child td{border-bottom:0}
+  tbody tr:hover{background:var(--soft)}
+  .num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+  .mut{color:var(--mut)}
+  .id{font:12px var(--mono);color:var(--mut)}
+  .tag{display:inline-block;padding:1px 9px;border-radius:99px;background:var(--soft);font-size:13px}
+  .tag.m{background:color-mix(in srgb,var(--m) 16%,transparent);color:var(--m);font-weight:600}
+  .pager{display:flex;gap:10px;align-items:center;padding:12px 16px;border-top:1px solid var(--line);color:var(--mut)}
+  .empty{padding:28px 16px;text-align:center;color:var(--mut)}
+  .msg{margin:12px 16px;padding:9px 12px;border-radius:6px}
+  .msg.err{background:var(--errbg);color:var(--err)}.msg.ok{background:var(--okbg);color:var(--ok)}.msg.warn{background:var(--warnbg);color:var(--warn)}
+  .msg:empty{display:none}
+  .unread td:nth-child(2){font-weight:600}
+  .unread td:first-child::before{content:'';display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--m);margin-right:8px}
+  .count{font:700 22px var(--head);color:var(--m)}
+  .out{margin:0;padding:14px 16px;white-space:pre-wrap;word-break:break-word;font:12.5px/1.5 var(--mono);background:var(--soft);border-top:1px solid var(--line)}
+  .out:empty{display:none}
+  .grow{flex:1 1 240px}
+
+  /* consola */
+  .log{background:var(--panel);border-left:1px solid var(--line);position:sticky;top:0;height:100vh;display:flex;flex-direction:column;min-width:0}
+  .log header{display:flex;align-items:center;justify-content:space-between;padding:16px;border-bottom:1px solid var(--line)}
+  .log h3{margin:0;font:700 16px var(--head)}
+  .log header>div:last-child{display:flex;gap:6px;flex:none}
+  .log header p{margin:2px 0 0;font-size:13px;color:var(--mut)}
+  #consola{overflow:auto;flex:1;padding:6px 0}
+  .e{border-bottom:1px solid var(--line);padding:8px 16px}
+  .e summary{cursor:pointer;list-style:none;display:flex;gap:8px;align-items:baseline;flex-wrap:wrap}
+  .e summary::-webkit-details-marker{display:none}
+  .st{font:600 12px var(--mono);padding:1px 7px;border-radius:5px}
+  .st.s2{background:var(--okbg);color:var(--ok)}.st.s4{background:var(--warnbg);color:var(--warn)}.st.s5,.st.s0{background:var(--errbg);color:var(--err)}
+  .e .me{font:600 12px var(--mono)}.e .pa{font:12px var(--mono);word-break:break-all;flex:1 1 100%}
+  .e .wh{font-size:12px;color:var(--mut);margin-left:auto}
+  .e pre{margin:8px 0 0;font:12px/1.45 var(--mono);white-space:pre-wrap;word-break:break-word;background:var(--soft);padding:8px;border-radius:6px;max-height:260px;overflow:auto}
+  .tog{display:none}
+  body.nolog .tog{display:inline-block;position:fixed;right:16px;bottom:16px;z-index:9;box-shadow:0 2px 10px rgba(0,0,0,.25)}
+
+  @media (max-width:1180px){
+    .app,body.nolog .app{grid-template-columns:minmax(0,1fr)}
+    .rail{position:static;height:auto;flex-direction:column}
+    .who,.mods{flex-direction:row;flex-wrap:wrap}
+    .who button,.mods button{width:auto}
+    .log{position:static;height:auto;max-height:420px;border-left:0;border-top:1px solid var(--line)}
+    body.nolog .log{display:none}
+    main{padding:20px 16px 32px}
+  }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <aside class="rail">
+    <div class="brand">Panel de laboratorio<small>API administrativa</small></div>
+    <div>
+      <h3>Actuando como</h3>
+      <div class="who" id="who"></div>
+      <input type="hidden" id="user" value="admin">
+    </div>
+    <div>
+      <h3>Módulos</h3>
+      <div class="mods" id="tabs" role="tablist">
+        <button role="tab" data-t="pagos" aria-selected="true" style="--c:#0e9f6e"><span class="dot"></span>Pagos</button>
+        <button role="tab" data-t="ciudades" aria-selected="false" style="--c:#2b6ce4"><span class="dot"></span>Ciudades</button>
+        <button role="tab" data-t="contactos" aria-selected="false" style="--c:#7a4de8"><span class="dot"></span>Directorio</button>
+        <button role="tab" data-t="notif" aria-selected="false" style="--c:#e8590c"><span class="dot"></span>Notificaciones<span class="bd" id="nav-n" style="--m:#e8590c"></span></button>
+        <button role="tab" data-t="act" aria-selected="false" style="--c:#d6336c"><span class="dot"></span>Actividades</button>
+      </div>
+    </div>
+  </aside>
+
+  <main>
+    <!-- PAGOS -->
+    <section id="pagos" class="on" data-m="pagos">
+      <div class="head"><div><h2>Historial de pagos</h2><p>Pagos con su cliente y crédito. Los filtros se combinan.</p></div><span class="route">GET /pagos/historial</span></div>
+      <div class="panel">
+        <div class="bar">
+          <label>Desde<input type="date" id="p-ini"></label>
+          <label>Hasta<input type="date" id="p-fin"></label>
+          <label>Cédula del cliente<input id="p-ced" placeholder="DOC-A"></label>
+          <label>ID del crédito<input id="p-cred" placeholder="CR-A"></label>
+          <label>Por página<input id="p-lim" type="number" min="1" max="100" value="20" style="width:90px"></label>
+          <button class="b" id="p-go">Buscar</button>
+        </div>
+        <div id="p-msg"></div>
+        <div class="tw"><table><thead><tr><th>ID</th><th>Fecha</th><th>Cliente</th><th>Crédito</th><th>Método</th><th>Operación</th><th class="num">Valor</th></tr></thead><tbody id="p-body"></tbody></table></div>
+        <div class="pager"><button class="s" id="p-prev" aria-label="Página anterior">‹</button><span id="p-info"></span><button class="s" id="p-next" aria-label="Página siguiente">›</button></div>
+      </div>
+    </section>
+
+    <!-- CIUDADES -->
+    <section id="ciudades" data-m="ciudades">
+      <div class="head"><div><h2>Ciudades</h2><p>Busca por nombre, país o código. Ignora tildes y mayúsculas. Máximo 20 resultados.</p></div><span class="route">GET /cities · público</span></div>
+      <div class="panel">
+        <div class="bar">
+          <label>Buscar<input id="c-q" placeholder="lumina"></label>
+          <label>País o código<input id="c-country" placeholder="bo"></label>
+          <button class="b" id="c-go">Buscar</button>
+        </div>
+        <div id="c-msg"></div>
+        <div class="tw"><table><thead><tr><th>ID</th><th>Nombre (ascii)</th><th>Ciudad</th><th>País</th><th>Código</th></tr></thead><tbody id="c-body"></tbody></table></div>
+      </div>
+    </section>
+
+    <!-- DIRECTORIO -->
+    <section id="contactos" data-m="contactos">
+      <div class="head"><div><h2>Directorio de asesores</h2><p>Contactos de una agencia. Cada cambio queda en el historial.</p></div><span class="route">/agencias/:agencia/asesores</span></div>
+      <div class="panel">
+        <div class="bar">
+          <label>Agencia<input id="a-ag" type="number" min="1" value="1" style="width:90px"></label>
+          <label>Ver<select id="a-vista"><option value="activos">Activos</option><option value="eliminados">Eliminados</option></select></label>
+          <label class="grow">Buscar<input id="a-search" placeholder="Nombre, correo o teléfono"></label>
+          <label>Por página<input id="a-lim" type="number" min="1" max="100" value="20" style="width:90px"></label>
+          <button class="b" id="a-go">Listar</button>
+        </div>
+        <div id="a-msg"></div>
+        <div class="tw"><table><thead><tr><th>Nombre</th><th>Correo</th><th>Teléfono</th><th>ID</th><th></th></tr></thead><tbody id="a-body"></tbody></table></div>
+        <div class="pager"><button class="s" id="a-prev" aria-label="Página anterior">‹</button><span id="a-info"></span><button class="s" id="a-next" aria-label="Página siguiente">›</button></div>
+      </div>
+      <div class="panel">
+        <div class="pad"><strong id="a-formtitle" style="font:700 17px var(--head)">Nuevo contacto</strong></div>
+        <div class="bar" style="border-top:1px solid var(--line);border-bottom:0">
+          <label class="grow">Nombre completo<input id="f-nom"></label>
+          <label class="grow">Correo<input id="f-cor"></label>
+          <label>Teléfono<input id="f-tel"></label>
+          <button class="b" id="f-save">Guardar</button>
+          <button class="s" id="f-cancel" style="display:none">Cancelar edición</button>
+        </div>
+        <div id="f-msg"></div>
+      </div>
+      <div class="panel" id="a-histcard" style="display:none">
+        <div class="pad"><strong style="font:700 17px var(--head)">Historial de <span id="a-histid" class="id"></span></strong></div>
+        <div class="tw"><table><thead><tr><th>#</th><th>Acción</th><th>Actor</th><th>Fecha</th><th>Nombre antes y después</th></tr></thead><tbody id="a-hist"></tbody></table></div>
+      </div>
+    </section>
+
+    <!-- NOTIFICACIONES -->
+    <section id="notif" data-m="notif">
+      <div class="head"><div><h2>Notificaciones</h2><p>Lo que lees u ocultas solo cambia para el usuario actual.</p></div><span class="route">/notifications</span></div>
+      <div class="panel">
+        <div class="bar">
+          <div><div class="mut" style="font-size:13px">Sin leer</div><div class="count" id="n-count">–</div></div>
+          <label>Mostrar hasta<input id="n-lim" type="number" value="50" style="width:90px"></label>
+          <button class="b" id="n-go">Actualizar</button>
+          <button class="s" id="n-readall">Marcar todas como leídas</button>
+          <button class="d" id="n-clear">Ocultar todas</button>
+        </div>
+        <div id="n-msg"></div>
+        <div class="tw"><table><thead><tr><th>ID</th><th>Título</th><th>Creada</th><th>Leída</th><th></th></tr></thead><tbody id="n-body"></tbody></table></div>
+      </div>
+    </section>
+
+    <!-- ACTIVIDADES -->
+    <section id="act" data-m="act">
+      <div class="head"><div><h2>Actividad comercial</h2><p>Registra una gestión sobre un prospecto y, si quieres, su próxima tarea.</p></div><span class="route">POST /crm/registros/:id/actividades</span></div>
+      <div class="panel">
+        <div class="bar">
+          <label>Registro<select id="r-id"><option>r1</option><option>r2</option><option>r3</option><option>r4</option><option>nope</option></select></label>
+          <label>Tipo<select id="r-tipo"><option>llamada</option><option>correo</option><option>reunion</option></select></label>
+          <label>Resultado<select id="r-res"><option>contactado</option><option>sin_respuesta</option></select></label>
+          <label>Fecha (opcional)<input type="datetime-local" id="r-fecha"></label>
+        </div>
+        <div class="pad"><label>Detalle<textarea id="r-det" placeholder="Qué pasó en la gestión"></textarea></label></div>
+        <div class="bar" style="border-top:1px solid var(--line);border-bottom:0">
+          <label class="grow">Próxima acción (opcional)<input id="r-prox"></label>
+          <label>Vence (con la próxima acción)<input type="datetime-local" id="r-vence"></label>
+          <button class="b" id="r-go">Registrar actividad</button>
+          <button class="s" id="r-sum">Ver resumen del registro</button>
+        </div>
+        <div id="r-msg"></div>
+        <pre class="out" id="r-out"></pre>
+      </div>
+    </section>
+  </main>
+
+  <aside class="log">
+    <header>
+      <div><h3>Peticiones</h3><p>Lo que responde el servidor, en vivo</p></div>
+      <div><button class="s" id="clr">Limpiar</button> <button class="s" id="hide" aria-label="Ocultar panel">✕</button></div>
+    </header>
+    <div id="consola"><div class="empty" id="vacio">Aún no hay peticiones. Usa cualquier módulo.</div></div>
+  </aside>
+</div>
+<button class="s tog" id="show">Ver peticiones</button>
+
+<script>
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const qs = o => { const p = new URLSearchParams(); for (const [k,v] of Object.entries(o)) if (v !== '' && v != null) p.set(k, v); const s = p.toString(); return s ? '?' + s : ''; };
+const fmt = s => s ? new Date(s).toLocaleString() : '—';
+const iso = v => v ? new Date(v).toISOString() : '';
+
+/* usuario (identidad x-user) */
+const USERS = [['admin','admin','AD'],['asesor-a','asesor','A'],['asesor-b','asesor','B'],['analista','analista','AN'],['','sin identidad','?']];
+function pintarUsuarios() {
+  const cur = $('#user').value;
+  $('#who').innerHTML = USERS.map(([id, rol, ini]) => `<button data-u="${id}" aria-pressed="${id === cur}"><span class="av">${ini}</span><span>${id || 'Anónimo'}<small>${rol}</small></span></button>`).join('');
+}
+$('#who').onclick = e => {
+  const b = e.target.closest('button'); if (!b) return;
+  $('#user').value = b.dataset.u; pintarUsuarios();
+  try { localStorage.setItem('user', b.dataset.u); } catch {}
+  const t = document.querySelector('section.on').id; refrescar(t);
+};
+try { const u = localStorage.getItem('user'); if (u !== null && USERS.some(x => x[0] === u)) $('#user').value = u; } catch {}
+pintarUsuarios();
+
+/* consola de peticiones */
+function log(method, path, status, data) {
+  $('#vacio')?.remove();
+  const cls = 's' + String(status)[0];
+  const d = document.createElement('details'); d.className = 'e';
+  d.innerHTML = `<summary><span class="st ${cls}">${status || 'sin conexión'}</span><span class="me">${esc(method)}</span><span class="wh">${esc($('#user').value || 'sin identidad')}</span><span class="pa">${esc(path)}</span></summary><pre>${esc(JSON.stringify(data, null, 2) ?? '')}</pre>`;
+  $('#consola').prepend(d);
+}
+async function api(path, method = 'GET', body, publico = false) {
+  const headers = {}; const u = $('#user').value;
+  if (u && !publico) headers['x-user'] = u;
+  if (body !== undefined) headers['content-type'] = 'application/json';
+  let r, data = null;
+  try { r = await fetch(path, { method, headers, body: body === undefined ? undefined : JSON.stringify(body) }); }
+  catch (e) { log(method, path, 0, { error: String(e) }); return { ok: false, status: 0, data: { error: 'No se pudo conectar con el servidor. Comprueba que esté en marcha.' } }; }
+  try { data = await r.json(); } catch {}
+  log(method, path, r.status, data);
+  return { ok: r.ok, status: r.status, data };
+}
+const show = (id, res, okText) => {
+  const el = $(id);
+  if (res.ok) el.innerHTML = okText ? `<div class="msg ok">${esc(okText)}</div>` : '';
+  else el.innerHTML = `<div class="msg err">${res.status ? res.status + ' · ' : ''}${esc(res.data?.error || 'Error')}</div>`;
+};
+$('#clr').onclick = () => { $('#consola').innerHTML = '<div class="empty" id="vacio">Aún no hay peticiones. Usa cualquier módulo.</div>'; };
+$('#hide').onclick = () => document.body.classList.add('nolog');
+$('#show').onclick = () => document.body.classList.remove('nolog');
+
+/* módulos */
+function refrescar(t) { ({ pagos: () => pagos(1), ciudades, contactos: () => contactos(1), notif: notifs, act: () => {} })[t]?.(); }
+$('#tabs').onclick = e => {
+  const b = e.target.closest('button'); if (!b) return;
+  const t = b.dataset.t;
+  document.querySelectorAll('#tabs button').forEach(x => x.setAttribute('aria-selected', x === b));
+  document.querySelectorAll('main section').forEach(s => s.classList.toggle('on', s.id === t));
+  refrescar(t);
+};
+
+/* 1 · PAGOS */
+let pPage = 1, pTotalPages = 1;
+async function pagos(page = 1) {
+  pPage = page;
+  const r = await api('/pagos/historial' + qs({ fecha_inicio: $('#p-ini').value, fecha_fin: $('#p-fin').value, cedula_cliente: $('#p-ced').value, id_credito: $('#p-cred').value, page, limit: $('#p-lim').value }));
+  show('#p-msg', r);
+  if (!r.ok) { $('#p-body').innerHTML = ''; $('#p-info').textContent = ''; return; }
+  const d = r.data; pTotalPages = d.totalPages;
+  $('#p-body').innerHTML = d.items.map(p => `<tr><td class="id">${p.id_pago}</td><td>${esc(p.fecha_pago)}</td><td>${esc(p.nombre_cliente ?? '—')}<div class="mut">${esc(p.cedula_cliente ?? 'Sin cliente')}</div></td><td>${esc(p.id_credito ?? '—')} ${p.estado_credito ? `<span class="tag">${esc(p.estado_credito)}</span>` : ''}</td><td>${esc(p.metodo_pago)}</td><td><span class="tag m">${esc(p.operacion)}</span></td><td class="num">${Number(p.valor_total).toLocaleString()}</td></tr>`).join('') || '<tr><td colspan="7" class="empty">No hay pagos con esos filtros. Quita o cambia un filtro.</td></tr>';
+  $('#p-info').textContent = `Página ${d.page} de ${d.totalPages} · ${d.total} pagos`;
+}
+$('#p-go').onclick = () => pagos(1);
+$('#p-prev').onclick = () => pPage > 1 && pagos(pPage - 1);
+$('#p-next').onclick = () => pPage < pTotalPages && pagos(pPage + 1);
+
+/* 2 · CIUDADES */
+async function ciudades() {
+  const r = await api('/cities' + qs({ q: $('#c-q').value, country: $('#c-country').value }), 'GET', undefined, true);
+  show('#c-msg', r);
+  $('#c-body').innerHTML = r.ok ? (r.data.map(c => `<tr><td class="id">${esc(c.id)}</td><td>${esc(c.ascii)}</td><td>${esc(c.city)}</td><td>${esc(c.country)}</td><td><span class="tag m">${esc(c.countryCode)}</span></td></tr>`).join('') || '<tr><td colspan="5" class="empty">Ninguna ciudad coincide. Prueba con otro nombre o país.</td></tr>') : '';
+}
+$('#c-go').onclick = ciudades;
+
+/* 3 · DIRECTORIO */
+let aPage = 1, aMax = 1, editId = null;
+const base = () => `/agencias/${encodeURIComponent($('#a-ag').value)}/asesores`;
+async function contactos(page = 1) {
+  aPage = page;
+  const r = await api(base() + qs({ vista: $('#a-vista').value, search: $('#a-search').value, page, limit: $('#a-lim').value }));
+  show('#a-msg', r);
+  if (!r.ok) { $('#a-body').innerHTML = ''; $('#a-info').textContent = ''; return; }
+  const d = r.data; aMax = Math.max(1, Math.ceil(d.total / d.limit));
+  const elim = $('#a-vista').value === 'eliminados';
+  $('#a-body').innerHTML = d.items.map(c => `<tr><td>${esc(c.nombre_completo)}</td><td>${esc(c.correo ?? '—')}</td><td>${esc(c.telefono ?? '—')}</td><td class="id">${esc(c.id)}</td><td style="white-space:nowrap">
+    ${elim ? `<button class="s" data-a="rest" data-id="${esc(c.id)}">Restaurar</button>` : `<button class="s" data-a="edit" data-id="${esc(c.id)}" data-n="${esc(c.nombre_completo)}" data-c="${esc(c.correo ?? '')}" data-t="${esc(c.telefono ?? '')}">Editar</button> <button class="d" data-a="del" data-id="${esc(c.id)}">Dar de baja</button>`}
+    <button class="s" data-a="hist" data-id="${esc(c.id)}">Historial</button></td></tr>`).join('') || `<tr><td colspan="5" class="empty">${elim ? 'No hay contactos eliminados.' : 'Esta agencia aún no tiene contactos. Crea el primero abajo.'}</td></tr>`;
+  $('#a-info').textContent = `Página ${d.page} de ${aMax} · ${d.total} contactos`;
+}
+$('#a-go').onclick = () => contactos(1);
+$('#a-prev').onclick = () => aPage > 1 && contactos(aPage - 1);
+$('#a-next').onclick = () => aPage < aMax && contactos(aPage + 1);
+function resetForm() { editId = null; $('#f-nom').value = $('#f-cor').value = $('#f-tel').value = ''; $('#a-formtitle').textContent = 'Nuevo contacto'; $('#f-cancel').style.display = 'none'; }
+$('#f-cancel').onclick = resetForm;
+$('#f-save').onclick = async () => {
+  const body = { nombre_completo: $('#f-nom').value };
+  if ($('#f-cor').value !== '') body.correo = $('#f-cor').value;
+  if ($('#f-tel').value !== '') body.telefono = $('#f-tel').value;
+  const r = editId ? await api(`${base()}/${encodeURIComponent(editId)}`, 'PATCH', body) : await api(base(), 'POST', body);
+  show('#f-msg', r, editId ? 'Contacto actualizado' : 'Contacto creado');
+  if (r.ok) {
+    if (r.data.coincidencias?.length) $('#f-msg').innerHTML += `<div class="msg warn">Ya existe otro contacto con el mismo correo o teléfono: ${r.data.coincidencias.map(c => esc(c.nombre_completo)).join(', ')}</div>`;
+    resetForm(); contactos(aPage);
+  }
+};
+$('#a-body').onclick = async e => {
+  const b = e.target.closest('button'); if (!b) return;
+  const id = b.dataset.id, a = b.dataset.a;
+  if (a === 'edit') { editId = id; $('#f-nom').value = b.dataset.n; $('#f-cor').value = b.dataset.c; $('#f-tel').value = b.dataset.t; $('#a-formtitle').textContent = 'Editar contacto'; $('#f-cancel').style.display = ''; $('#f-nom').focus(); return; }
+  if (a === 'del') { const r = await api(`${base()}/${encodeURIComponent(id)}`, 'DELETE'); show('#a-msg', r, 'Contacto dado de baja'); contactos(aPage); }
+  if (a === 'rest') { const r = await api(`${base()}/${encodeURIComponent(id)}/restaurar`, 'PATCH'); show('#a-msg', r, 'Contacto restaurado'); contactos(aPage); }
+  if (a === 'hist') {
+    const r = await api(`${base()}/${encodeURIComponent(id)}/historial`); show('#a-msg', r);
+    if (!r.ok) return;
+    $('#a-histcard').style.display = ''; $('#a-histid').textContent = id;
+    $('#a-hist').innerHTML = r.data.map(ev => `<tr><td class="id">${ev.id}</td><td><span class="tag m">${esc(ev.accion)}</span></td><td>${esc(ev.actor_id)}</td><td>${fmt(ev.created_at)}</td><td class="mut">${esc(ev.anterior ? ev.anterior.nombre_completo : '—')} → ${esc(ev.nuevo.nombre_completo)}</td></tr>`).join('');
+  }
+};
+
+/* 4 · NOTIFICACIONES */
+async function notifs() {
+  const r = await api('/notifications' + qs({ limit: $('#n-lim').value }));
+  show('#n-msg', r);
+  if (!r.ok) { $('#n-body').innerHTML = ''; $('#n-count').textContent = '–'; $('#nav-n').textContent = ''; return; }
+  $('#n-count').textContent = r.data.unreadCount;
+  $('#nav-n').textContent = r.data.unreadCount || '';
+  $('#n-body').innerHTML = r.data.items.map(n => `<tr class="${n.readAt ? '' : 'unread'}"><td class="id">${esc(n.id)}</td><td>${esc(n.title)}</td><td>${fmt(n.createdAt)}</td><td>${n.readAt ? fmt(n.readAt) : '—'}</td><td style="white-space:nowrap"><button class="s" data-a="read" data-id="${esc(n.id)}">Marcar leída</button> <button class="d" data-a="hide" data-id="${esc(n.id)}">Ocultar</button></td></tr>`).join('') || '<tr><td colspan="5" class="empty">No tienes notificaciones visibles.</td></tr>';
+}
+$('#n-go').onclick = notifs;
+async function masiva(ruta, texto) {
+  const r = await api(ruta, 'POST', {});
+  await notifs();
+  if (r.ok) $('#n-msg').innerHTML = `<div class="msg ok">${r.data.updated} ${texto}</div>`; else show('#n-msg', r);
+}
+$('#n-readall').onclick = () => masiva('/notifications/read-all', 'marcadas como leídas');
+$('#n-clear').onclick = () => masiva('/notifications/clear', 'ocultadas');
+$('#n-body').onclick = async e => {
+  const b = e.target.closest('button'); if (!b) return;
+  const id = encodeURIComponent(b.dataset.id);
+  const r = b.dataset.a === 'read' ? await api(`/notifications/${id}/read`, 'PATCH') : await api(`/notifications/${id}`, 'DELETE');
+  show('#n-msg', r); if (r.ok) notifs();
+};
+
+/* 5 · ACTIVIDADES */
+$('#r-go').onclick = async () => {
+  const body = { tipo: $('#r-tipo').value, resultado: $('#r-res').value, detalle: $('#r-det').value };
+  if ($('#r-fecha').value) body.fecha = iso($('#r-fecha').value);
+  if ($('#r-prox').value) body.proxima_accion = $('#r-prox').value;
+  if ($('#r-vence').value) body.vence_at = iso($('#r-vence').value);
+  const r = await api(`/crm/registros/${encodeURIComponent($('#r-id').value)}/actividades`, 'POST', body);
+  show('#r-msg', r, 'Actividad registrada');
+  $('#r-out').textContent = r.ok ? JSON.stringify(r.data, null, 2) : '';
+};
+$('#r-sum').onclick = async () => {
+  const r = await api(`/crm/registros/${encodeURIComponent($('#r-id').value)}/resumen`);
+  show('#r-msg', r);
+  $('#r-out').textContent = r.ok ? JSON.stringify(r.data, null, 2) : '';
+};
+
+pagos(1); notifs();
+</script>
+</body>
+</html>

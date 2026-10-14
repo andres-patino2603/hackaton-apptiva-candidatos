@@ -8,10 +8,16 @@ import { contactosRouter } from './casos/03-contactos.js';
 import { notificacionesRouter } from './casos/04-notificaciones.js';
 import { actividadesRouter } from './casos/05-actividades.js';
 import { crmLecturaRouter } from './crm-lectura.js';
+import { fileURLToPath } from 'node:url';
+
+
+
 const db = await openDb(resolve(process.env.DB_PATH ?? 'data/lab.sqlite'));
 const app = express();
 app.use(express.json({ limit: '32kb' }));
 app.get('/health', (_req, res) => res.json({ ok: true }));
+app.use('/ui', express.static(fileURLToPath(new URL('../vista', import.meta.url))));
+app.get('/', (_req, res) => res.redirect('/ui/'));
 app.use('/pagos', pagosRouter(db));
 app.use('/cities', ciudadesRouter());
 app.use('/agencias', contactosRouter(db));
