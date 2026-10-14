@@ -17,6 +17,29 @@ function resolveAgencia(db: Db, raw: string, user: Actor): number {
   if (user.role !== 'admin' && agencia.advisor_id !== user.id) throw new HttpError(403, 'Agencia ajena');
   return id;
 }
+function texto(value: unknown, campo: string, max: number): string {
+  if (typeof value !== 'string') throw new HttpError(400, `${campo} inválido`);
+  if (value.length > max) throw new HttpError(400, `${campo} demasiado largo`);
+  return value.trim();
+}
+function normNombre(value: unknown): string {
+  const nombre = texto(value, 'nombre_completo', 150);
+  if (!nombre) throw new HttpError(400, 'nombre_completo vacío');
+  return nombre;
+}
+function normCorreo(value: unknown): string | null {
+  if (value === undefined || value === null) return null;
+  const correo = texto(value, 'correo', 255).toLowerCase();
+  if (correo === '') return null;
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(correo)) throw new HttpError(400, 'correo inválido');
+  return correo;
+}
+function normTelefono(value: unknown): string | null {
+  if (value === undefined || value === null) return null;
+  const limpio = texto(value, 'telefono', 30).replace(/[^+\d]/g, '');
+  const resultado = limpio.startsWith('+') ? '+' + limpio.slice(1).replace(/\+/g, '') : limpio.replace(/\+/g, '');
+  return resultado === '' ? null : resultado;
+}
 export function contactosRouter(_db: Db) {
   const router = Router();
   router.use((req, res) => {
