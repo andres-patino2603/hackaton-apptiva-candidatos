@@ -8,10 +8,11 @@ function normalize(value: string): string {
 export function ciudadesRouter() {
   const router = Router();
   router.get('/', (req, res) => {
-    const q = scalar(req.query.q), country = scalar(req.query.country);
-    res.json(cities.slice(0, 20).filter(c =>
-      (!q || c.ascii.includes(q)) || (!country || c.countryCode === country)
-    ));
+    const q = normalize(scalar(req.query.q)), country = normalize(scalar(req.query.country));
+    res.json(cities.filter(c =>
+      (!q || normalize(c.ascii).includes(q) || normalize(c.country).includes(q) || normalize(c.countryCode).includes(q))
+      && (!country || normalize(c.country).includes(country) || normalize(c.countryCode).includes(country))
+    ).slice(0, 20));
   });
   return router;
 }
