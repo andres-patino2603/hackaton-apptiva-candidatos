@@ -12,6 +12,19 @@ const FROM_AUDIENCIA = `FROM notificaciones n
 function paramsAudiencia(user: Actor): [string, string, string] {
   return [user.email, user.role, user.email];
 }
+function enAudiencia(db: Db, user: Actor, id: string): boolean {
+  return db.get<{ id: string }>(
+    `SELECT n.id FROM notificaciones n
+     WHERE n.center = 1 AND n.id = ?
+       AND (n.broadcast = 1 OR EXISTS (
+         SELECT 1 FROM destinatarios d WHERE d.notification_id = n.id
+         AND ((d.tipo = 'role' AND d.valor = ?) OR (d.tipo = 'user' AND d.valor = ?))))`,
+    [id, user.role, user.email]) !== undefined;
+}
+type LecturaPropia = { read_at: string | null; hidden_at: string | null };
+function lecturaPropia(db: Db, user: Actor, id: string): LecturaPropia | undefined {
+  return db.get<LecturaPropia>('SELECT read_at, hidden_at FROM lecturas WHERE notification_id=? AND user_email=?', [id, user.email]);
+}
 export function notificacionesRouter(db: Db) {
   const router = Router();
   router.get('/', (req, res) => {
@@ -26,34 +39,56 @@ export function notificacionesRouter(db: Db) {
     res.json({ items, unreadCount });
   });
   router.patch('/:id/read', (req, res) => {
-    const user = actor(req), now = new Date().toISOString();
-    db.transaction(() => db.run('INSERT OR REPLACE INTO lecturas(notification_id,user_email,read_at) VALUES(?,?,?)', [req.params.id,user.email,now]));
-    res.json({id:req.params.id,readAt:now});
+    const user = actor(req);
+    const id = req.params.id;
+    if (!enAudiencia(db, user, id)) throw new HttpError(404, 'Notificación no disponible');
+    const propia = lecturaPropia(db, user, id);
+    if (propia?.read_at) { res.json({ id, readAt: propia.read_at }); return; }
+    const now = new Date().toISOString();
+    db.transaction(() => {
+      if (propia) db.run('UPDATE lecturas SET read_at=? WHERE notification_id=? AND user_email=?', [now, id, user.email]);
+      else db.run('INSERT INTO lecturas(notification_id,user_email,read_at) VALUES(?,?,?)', [id, user.email, now]);
+    });
+    res.json({ id, readAt: now });
   });
   router.delete('/:id', (req, res) => {
-    actor(req);
-    db.transaction(() => db.run('UPDATE notificaciones SET center=0 WHERE id=?',[req.params.id]));
-    res.json({id:req.params.id,hiddenAt:new Date().toISOString()});
+    const user = actor(req);
+    const id = req.params.id;
+    if (!enAudiencia(db, user, id)) throw new HttpError(404, 'Notificación no disponible');
+    const propia = lecturaPropia(db, user, id);
+    if (propia?.hidden_at) { res.json({ id, hiddenAt: propia.hidden_at }); return; }
+    const now = new Date().toISOString();
+    db.transaction(() => {
+      if (propia) db.run('UPDATE lecturas SET hidden_at=? WHERE notification_id=? AND user_email=?', [now, id, user.email]);
+      else db.run('INSERT INTO lecturas(notification_id,user_email,read_at,hidden_at) VALUES(?,?,?,?)', [id, user.email, now, now]);
+    });
+    res.json({ id, hiddenAt: now });
   });
   router.post('/read-all', (req, res) => {
     const user = actor(req);
-    const items = db.all<{id:string}>(`SELECT n.id FROM notificaciones n WHERE n.center=1
-      AND (n.broadcast=1 OR EXISTS(SELECT 1 FROM destinatarios d WHERE d.notification_id=n.id
-      AND ((d.tipo='role' AND d.valor=?) OR (d.tipo='user' AND d.valor=?))))`,[user.role,user.email]);
+    const pendientes = db.all<{ id: string }>(`SELECT n.id ${FROM_AUDIENCIA} AND l.read_at IS NULL`, paramsAudiencia(user));
+    const now = new Date().toISOString();
+    let updated = 0;
     db.transaction(() => {
-      for (const item of items) db.run('INSERT OR IGNORE INTO lecturas(notification_id,user_email,read_at) VALUES(?,?,?)',[item.id,user.email,new Date().toISOString()]);
+      for (const item of pendientes) {
+        updated += db.run('INSERT OR IGNORE INTO lecturas(notification_id,user_email,read_at) VALUES(?,?,?)', [item.id, user.email, now]);
+      }
     });
-    res.json({updated:items.length});
+    res.json({ updated });
   });
   router.post('/clear', (req, res) => {
     const user = actor(req);
-    const items = db.all<{id:string}>(`SELECT n.id FROM notificaciones n WHERE n.center=1
-      AND (n.broadcast=1 OR EXISTS(SELECT 1 FROM destinatarios d WHERE d.notification_id=n.id
-      AND ((d.tipo='role' AND d.valor=?) OR (d.tipo='user' AND d.valor=?))))`,[user.role,user.email]);
+    const visibles = db.all<{ id: string }>(`SELECT n.id ${FROM_AUDIENCIA}`, paramsAudiencia(user));
+    const now = new Date().toISOString();
+    let updated = 0;
     db.transaction(() => {
-      for (const item of items) db.run('UPDATE notificaciones SET center=0 WHERE id=?',[item.id]);
+      for (const item of visibles) {
+        const propia = lecturaPropia(db, user, item.id);
+        if (propia) updated += db.run('UPDATE lecturas SET hidden_at=? WHERE notification_id=? AND user_email=? AND hidden_at IS NULL', [now, item.id, user.email]);
+        else updated += db.run('INSERT INTO lecturas(notification_id,user_email,read_at,hidden_at) VALUES(?,?,?,?)', [item.id, user.email, now, now]);
+      }
     });
-    res.json({updated:items.length});
+    res.json({ updated });
   });
   return router;
 }
