@@ -1,4 +1,5 @@
 import { NavLink, Outlet } from "react-router-dom"
+import { useQueryClient } from "@tanstack/react-query"
 import { getIdentidad, setIdentidad, type Identidad } from "@/lib/api"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
@@ -18,6 +19,13 @@ const IDENTIDADES: Identidad[] = ["admin", "asesor-a", "asesor-b", "analista"]
 
 export function Layout() {
   const [identidad, setIdentidadLocal] = useState<Identidad>(getIdentidad)
+  const queryClient = useQueryClient()
+
+  const cambiarIdentidad = (id: Identidad) => {
+    setIdentidad(id)
+    setIdentidadLocal(id)
+    queryClient.clear()
+  }
 
   return (
     <div className="flex min-h-svh bg-background">
@@ -47,9 +55,7 @@ export function Layout() {
           <Select
             value={identidad}
             onValueChange={(valor) => {
-              const id = valor as Identidad
-              setIdentidad(id)
-              setIdentidadLocal(id)
+              if (valor) cambiarIdentidad(valor as Identidad)
             }}
           >
             <SelectTrigger className="w-full">
@@ -66,7 +72,7 @@ export function Layout() {
         </div>
       </aside>
       <main className="flex-1 overflow-x-auto p-6">
-        <Outlet />
+        <Outlet key={identidad} />
       </main>
       <Toaster />
     </div>
