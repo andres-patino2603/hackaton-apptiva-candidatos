@@ -1,3 +1,6 @@
+-- Caso 1: listado del historial de pagos.
+-- LEFT JOIN para conservar pagos sin cliente/credito.
+-- Filtros opcionales parametrizados y paginacion estable.
 SELECT
   p.id_pago AS id_pago,
   p.fecha_pago AS fecha_pago,

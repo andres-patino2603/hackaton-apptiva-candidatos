@@ -1,4 +1,6 @@
-﻿import { Router } from 'express';
+﻿// Caso 4: centro de notificaciones.
+// Audiencia y visible centralizadas; una accion por usuario, idempotente.
+import { Router } from 'express';
 import type { Db } from '../db.js';
 import { actor, HttpError, scalar } from '../http.js';
 

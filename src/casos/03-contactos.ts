@@ -1,4 +1,6 @@
-﻿import { Router } from 'express';
+﻿// Caso 3: directorio de contactos por agencia.
+// Valida agencia/permisos, normaliza datos, registra eventos y es idempotente.
+import { Router } from 'express';
 import type { Db } from '../db.js';
 import { actor, HttpError, scalar, integer } from '../http.js';
 

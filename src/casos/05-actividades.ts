@@ -1,4 +1,6 @@
-﻿import { Router } from 'express';
+﻿// Caso 5: actividad comercial y proxima accion.
+// Valida body completo antes de una transaccion atomica.
+import { Router } from 'express';
 import type { Db } from '../db.js';
 import { actor, HttpError } from '../http.js';
 

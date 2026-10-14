@@ -1,3 +1,5 @@
+-- Caso 1: total del historial de pagos con los mismos filtros.
+-- Siempre devuelve una fila, incluso con cero coincidencias.
 SELECT COUNT(*) AS total
 FROM pagos p
 LEFT JOIN clientes c ON c.cedula_cliente = p.cedula_cliente

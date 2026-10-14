@@ -1,3 +1,5 @@
+// Caso 2: buscador de ciudades.
+// Filtra antes de limitar a 20, normaliza con NFD y combina q + country con AND.
 import { Router } from 'express';
 import { scalar } from '../http.js';
 import { cities } from '../fixtures/cities.js';
