@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Hackatón Apptiva: resumen técnico</title>
+<style>
+:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
+--bg:#f7f6f2;--surface:#fff;--text:#1d1d1b;--muted:#5f5e5a;--line:#e1dfd6;--accent:#0f6e56;--accent-bg:#e1f5ee;--alt:#534ab7;--alt-bg:#eeedfe}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#171716;--surface:#222220;--text:#f1efe8;--muted:#b4b2a9;--line:#383835;--accent:#5dcaa5;--accent-bg:#04342c;--alt:#afa9ec;--alt-bg:#26215c}}
+:root[data-theme="dark"]{--bg:#171716;--surface:#222220;--text:#f1efe8;--muted:#b4b2a9;--line:#383835;--accent:#5dcaa5;--accent-bg:#04342c;--alt:#afa9ec;--alt-bg:#26215c}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*,*::before,*::after{box-sizing:inherit}
+body{margin:0;background:var(--bg);color:var(--text);font:16px/1.65 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+main{max-width:860px;margin:0 auto;padding:40px 20px 56px}
+header{margin-bottom:32px}
+.eyebrow{font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:var(--accent);font-weight:600}
+h1{font-size:clamp(26px,5vw,38px);line-height:1.2;margin:8px 0 12px}
+header p{color:var(--muted);max-width:62ch;margin:0}
+h2{font-size:20px;margin:40px 0 14px}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}
+.stat{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:16px}
+.stat b{display:block;font-size:28px;line-height:1.1}
+.stat span{color:var(--muted);font-size:14px}
+.cases{display:grid;gap:12px}
+.case{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:18px 20px}
+.case-top{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;justify-content:space-between}
+.case h3{font-size:17px;margin:0}
+.tag{font-size:12px;font-weight:600;padding:3px 10px;border-radius:99px;background:var(--alt-bg);color:var(--alt)}
+.tag.build{background:var(--accent-bg);color:var(--accent)}
+code{font:13px ui-monospace,Consolas,monospace;background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:1px 6px;overflow-wrap:anywhere}
+.case p{margin:8px 0 0;color:var(--muted);font-size:15px}
+.case ul{margin:10px 0 0;padding-left:18px;font-size:15px}
+.case li{margin:3px 0}
+.principles{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px}
+.principles div{border-left:3px solid var(--accent);padding:4px 0 4px 14px}
+.principles b{display:block;font-size:15px}
+.principles span{color:var(--muted);font-size:14px}
+.table-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:12px;background:var(--surface)}
+table{border-collapse:collapse;width:100%;min-width:520px;font-size:14px}
+th,td{text-align:left;padding:10px 14px;border-bottom:1px solid var(--line);vertical-align:top}
+th{color:var(--muted);font-weight:600;font-size:13px}
+tr:last-child td{border-bottom:0}
+footer{margin-top:40px;color:var(--muted);font-size:13px}
+.toolbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:14px}
+.toolbar .sp{flex:1}
+button{font:inherit;cursor:pointer}
+.chip,.mini{background:var(--surface);color:var(--text);border:1px solid var(--line);border-radius:99px;padding:6px 14px;font-size:14px;line-height:1.3}
+.mini{padding:3px 10px;font-size:12px;color:var(--muted)}
+.chip:hover,.mini:hover{border-color:var(--accent)}
+.chip[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--bg);font-weight:600}
+button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.count{color:var(--muted);font-size:13px;margin:0 0 10px}
+.case.hide{display:none}
+.case code+.mini{margin-left:8px}
+.js .case:not(.open) ul{display:none}
+</style>
+</head>
+<body>
+<main>
+<header>
+<div class="eyebrow">Prueba técnica · Apptiva</div>
+<h1>API administrativa: cinco funcionalidades entregadas</h1>
+<p>Resumen del trabajo sobre un proyecto Node.js, TypeScript y SQLite. Se corrigieron consultas, un buscador y un módulo legado, y se construyeron un directorio y un endpoint completos, todos validados por pruebas HTTP.</p>
+</header>
+
+<section class="stats" aria-label="Indicadores">
+<div class="stat"><b>5 de 5</b><span>casos resueltos</span></div>
+<div class="stat"><b>6 de 6</b><span>tests públicos</span></div>
+<div class="stat"><b>10</b><span>pruebas propias</span></div>
+<div class="stat"><b>0</b><span>errores de typecheck</span></div>
+</section>
+
+<h2>Los cinco casos</h2>
+<div class="toolbar" role="group" aria-label="Filtros">
+<button class="chip" data-f="all" aria-pressed="true">Todos</button>
+<button class="chip" data-f="fix" aria-pressed="false">Corregir o completar</button>
+<button class="chip" data-f="build" aria-pressed="false">Construir desde cero</button>
+<span class="sp"></span>
+<button class="chip" id="all">Expandir todo</button>
+<button class="chip" id="theme">Cambiar tema</button>
+</div>
+<p class="count" id="count" aria-live="polite"></p>
+<div class="cases">
+<article class="case">
+<div class="case-top"><h3>1 · Historial de pagos</h3><span class="tag">Completar SQL</span></div>
+<code>GET /pagos/historial</code>
+<ul>
+<li><code>LEFT JOIN</code> para conservar pagos sin cliente ni crédito.</li>
+<li>Filtros opcionales parametrizados, orden estable y total calculado antes de paginar.</li>
+<li>Monto alternativo con <code>COALESCE</code> cuando el total registrado es nulo o cero.</li>
+</ul>
+</article>
+<article class="case">
+<div class="case-top"><h3>2 · Ciudades</h3><span class="tag">Corregir errores</span></div>
+<code>GET /cities</code>
+<ul>
+<li>Cinco defectos: límite antes del filtro, OR en lugar de AND, sin normalizar tildes, búsqueda incompleta y país por igualdad.</li>
+<li>Normalización NFD en ambos lados, filtrar primero y limitar después a veinte.</li>
+</ul>
+</article>
+<article class="case">
+<div class="case-top"><h3>3 · Directorio de asesores</h3><span class="tag build">Desarrollo</span></div>
+<code>/agencias/:agencia/asesores</code>
+<ul>
+<li>Listado, alta, edición, baja lógica, restauración e historial.</li>
+<li>Permisos por agencia, normalización de datos y advertencias de duplicados.</li>
+<li>Cada cambio y su evento de auditoría en una misma transacción.</li>
+</ul>
+</article>
+<article class="case">
+<div class="case-top"><h3>4 · Notificaciones</h3><span class="tag">Mantenimiento</span></div>
+<code>/notifications</code>
+<ul>
+<li>Ocho defectos, entre ellos un contador que dependía de <code>limit</code> y estados compartidos entre usuarios.</li>
+<li>Definición única de audiencia y visibilidad para listado, contador, lectura y limpieza.</li>
+<li>Lectura y ocultamiento por usuario, idempotentes y persistentes.</li>
+</ul>
+</article>
+<article class="case">
+<div class="case-top"><h3>5 · Actividades comerciales</h3><span class="tag build">Desde cero</span></div>
+<code>POST /crm/registros/:id/actividades</code>
+<ul>
+<li>Identidad, permisos por responsable, validación estricta y respuesta 201.</li>
+<li>Actividad, tarea opcional y eventos en una sola transacción: si algo falla, no queda nada guardado.</li>
+</ul>
+</article>
+</div>
+
+<h2>Principios aplicados</h2>
+<div class="principles">
+<div><b>El contrato manda</b><span>Cada regla sale de CONTRATO.md, sin suposiciones.</span></div>
+<div><b>Validar antes de escribir</b><span>Un error de entrada nunca modifica datos.</span></div>
+<div><b>Transacciones</b><span>Los cambios relacionados se guardan juntos o no se guardan.</span></div>
+<div><b>SQL parametrizado</b><span>Los valores externos nunca se concatenan.</span></div>
+<div><b>Estado por usuario</b><span>Lo personal se guarda aparte del dato global.</span></div>
+<div><b>Idempotencia</b><span>Repetir una operación no genera efectos extra.</span></div>
+</div>
+
+<h2>Pruebas propias</h2>
+<div class="table-wrap">
+<table>
+<thead><tr><th>Área</th><th>Qué comprueba</th><th>Fallo que detecta</th></tr></thead>
+<tbody>
+<tr><td>Pagos</td><td>Paginación con filtros; relaciones opcionales</td><td>Total tras paginar; pérdida del pago sin relaciones</td></tr>
+<tr><td>Contactos</td><td>Permiso denegado; baja repetida y restauración</td><td>Escritura sin permiso; eventos duplicados</td></tr>
+<tr><td>Notificaciones</td><td>Aislamiento, idempotencia, reinicio</td><td>Estado compartido; fechas sobrescritas; datos no persistentes</td></tr>
+<tr><td>Actividades</td><td>Rechazo sin escrituras; eventos en orden; permisos</td><td>Validar tras escribir; actor tomado del cuerpo</td></tr>
+</tbody>
+</table>
+</div>
+
+<footer>Stack: Node.js 24, TypeScript, Express, SQLite (sql.js), Vitest.</footer>
+</main>
+<script>
+(function(){
+var root=document.documentElement;root.classList.add('js');
+var cases=[].slice.call(document.querySelectorAll('.case'));
+var count=document.getElementById('count'),allBtn=document.getElementById('all');
+var filter='all';
+function fallback(t){var a=document.createElement('textarea');a.value=t;document.body.appendChild(a);a.select();try{document.execCommand('copy')}catch(e){}document.body.removeChild(a)}
+function visible(){return cases.filter(function(c){return !c.classList.contains('hide')})}
+function sync(){var v=visible();count.textContent='Mostrando '+v.length+' de '+cases.length+' casos';var every=v.length>0&&v.every(function(c){return c.classList.contains('open')});allBtn.textContent=every?'Contraer todo':'Expandir todo'}
+function setOpen(c,o){c.classList.toggle('open',o);var b=c.querySelector('.detail');b.textContent=o?'Ocultar detalle':'Ver detalle';b.setAttribute('aria-expanded',String(o))}
+cases.forEach(function(c){
+c.dataset.kind=c.querySelector('.tag').classList.contains('build')?'build':'fix';
+var d=document.createElement('button');d.className='mini detail';d.textContent='Ver detalle';d.setAttribute('aria-expanded','false');
+d.onclick=function(){setOpen(c,!c.classList.contains('open'));sync()};
+c.querySelector('.case-top').appendChild(d);
+var code=c.querySelector('code'),cp=document.createElement('button');cp.className='mini';cp.textContent='Copiar ruta';
+cp.onclick=function(){var t=code.textContent;function ok(){cp.textContent='Copiado';setTimeout(function(){cp.textContent='Copiar ruta'},1500)}
+try{navigator.clipboard.writeText(t).then(ok,function(){fallback(t);ok()})}catch(e){fallback(t);ok()}};
+code.insertAdjacentElement('afterend',cp);
+});
+[].slice.call(document.querySelectorAll('[data-f]')).forEach(function(b){
+b.onclick=function(){filter=b.dataset.f;[].slice.call(document.querySelectorAll('[data-f]')).forEach(function(x){x.setAttribute('aria-pressed',String(x===b))});
+cases.forEach(function(c){c.classList.toggle('hide',filter!=='all'&&c.dataset.kind!==filter)});sync()}});
+allBtn.onclick=function(){var v=visible();var every=v.every(function(c){return c.classList.contains('open')});v.forEach(function(c){setOpen(c,!every)});sync()};
+document.getElementById('theme').onclick=function(){var cur=root.dataset.theme||(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');root.dataset.theme=cur==='dark'?'light':'dark'};
+sync();
+})();
+</script>
+</body>
+</html>
