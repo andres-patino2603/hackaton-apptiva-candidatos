@@ -1,20 +1,35 @@
-import { Button } from "@/components/ui/button"
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
+import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom"
+import { Layout } from "@/components/Layout"
+
+const queryClient = new QueryClient()
+
+function Placeholder({ titulo }: { titulo: string }) {
+  return (
+    <div>
+      <h1 className="text-2xl font-semibold">{titulo}</h1>
+      <p className="mt-2 text-muted-foreground">Vista en construcción.</p>
+    </div>
+  )
+}
 
 export function App() {
   return (
-    <div className="flex min-h-svh p-6">
-      <div className="flex max-w-md min-w-0 flex-col gap-4 text-sm leading-loose">
-        <div>
-          <h1 className="font-medium">Project ready!</h1>
-          <p>You may now add components and start building.</p>
-          <p>We&apos;ve already added the button component for you.</p>
-          <Button className="mt-2">Button</Button>
-        </div>
-        <div className="font-mono text-xs text-muted-foreground">
-          (Press <kbd>d</kbd> to toggle dark mode)
-        </div>
-      </div>
-    </div>
+    <QueryClientProvider client={queryClient}>
+      <BrowserRouter>
+        <Routes>
+          <Route element={<Layout />}>
+            <Route index element={<Placeholder titulo="Inicio" />} />
+            <Route path="ciudades" element={<Placeholder titulo="Ciudades" />} />
+            <Route path="pagos" element={<Placeholder titulo="Pagos" />} />
+            <Route path="notificaciones" element={<Placeholder titulo="Notificaciones" />} />
+            <Route path="contactos" element={<Placeholder titulo="Contactos" />} />
+            <Route path="crm" element={<Placeholder titulo="CRM" />} />
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Route>
+        </Routes>
+      </BrowserRouter>
+    </QueryClientProvider>
   )
 }
 
