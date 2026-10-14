@@ -1,6 +1,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom"
 import { Layout } from "@/components/Layout"
+import { VistaCiudades } from "@/views/Ciudades"
 
 const queryClient = new QueryClient()
 
@@ -20,7 +21,7 @@ export function App() {
         <Routes>
           <Route element={<Layout />}>
             <Route index element={<Placeholder titulo="Inicio" />} />
-            <Route path="ciudades" element={<Placeholder titulo="Ciudades" />} />
+            <Route path="ciudades" element={<VistaCiudades />} />
             <Route path="pagos" element={<Placeholder titulo="Pagos" />} />
             <Route path="notificaciones" element={<Placeholder titulo="Notificaciones" />} />
             <Route path="contactos" element={<Placeholder titulo="Contactos" />} />
