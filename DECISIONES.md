@@ -83,7 +83,21 @@ Para cada regresión relevante, describe petición de entrada, resultado anterio
 
 ## Pruebas propias
 
-Indica archivo/nombre de prueba, escenario, fallo que detecta y resultado. Incluye comandos ejecutados.
+Archivo: `tests-publicos/mis-pruebas.test.ts`
+
+| # | Nombre | Escenario | Fallo que detecta |
+|---|---|---|---|
+| 1 | Paginación historial page=2 | `DOC-A` + `limit=2` + `page=2` | Si el OFFSET está mal o el total no considera los filtros, la segunda página devuelve datos incorrectos |
+| 2 | Filtros combinados AND | `cedula_cliente` + `fecha_inicio` + `fecha_fin` | Si los filtros se combinan con OR en vez de AND, devuelve pagos fuera del rango |
+| 3 | 403 asesor agencia ajena | `asesor-b` intenta POST en agencia 1 | Si los permisos no validan el `advisor_id`, un asesor puede crear contactos en agencias ajenas |
+| 4 | 403 analista en directorio | `analista` intenta GET en agencia 1 | Si no se filtra el rol analista, tiene acceso al directorio |
+| 5 | Idempotencia de lectura | Marcar n1 como leída dos veces con `asesor-a` | Si `PATCH /read` usa `INSERT OR REPLACE`, la segunda llamada sobreescribe la fecha original |
+| 6 | Aislamiento entre usuarios | `asesor-a` lee n1; verificar `unreadCount` de `asesor-b` | Si la lectura modifica datos globales, el contador de otro usuario cambia |
+| 7 | 400 proxima_accion sin vence_at | POST con `proxima_accion` pero sin `vence_at` | Si la validación es incompleta, se acepta y persiste una tarea sin fecha de vencimiento |
+| 8 | Creación actividad con tarea | POST completo con `proxima_accion` + `vence_at` | Verifica estructura 201, tarea, 2 eventos en orden secuencial correcto |
+| 9 | Persistencia tras reinicio | Crear actividad, reiniciar servidor, verificar resumen | Si `db.transaction()` no llama a `save()`, los datos se pierden al reiniciar |
+
+
 
 ## Limitaciones y siguiente mejora
 
