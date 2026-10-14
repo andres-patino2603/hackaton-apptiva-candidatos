@@ -4,6 +4,7 @@ import { Layout } from "@/components/Layout"
 import { VistaCiudades } from "@/views/Ciudades"
 import { VistaPagos } from "@/views/Pagos"
 import { VistaNotificaciones } from "@/views/Notificaciones"
+import { VistaContactos } from "@/views/Contactos"
 
 const queryClient = new QueryClient()
 
@@ -26,7 +27,7 @@ export function App() {
             <Route path="ciudades" element={<VistaCiudades />} />
             <Route path="pagos" element={<VistaPagos />} />
             <Route path="notificaciones" element={<VistaNotificaciones />} />
-            <Route path="contactos" element={<Placeholder titulo="Contactos" />} />
+            <Route path="contactos" element={<VistaContactos />} />
             <Route path="crm" element={<Placeholder titulo="CRM" />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Route>
