@@ -32,7 +32,7 @@ export function notificacionesRouter(db: Db) {
     if (!/^-?\d+$/.test(value)) throw new HttpError(400, 'Límite inválido');
     const limit = Math.min(100, Math.max(1, Number(value)));
     const params = paramsAudiencia(user);
-    const unreadCount = db.get<{ total: number }>(`SELECT COUNT(*) AS total ${FROM_AUDIENCIA}`, params).total;
+    const unreadCount = db.get<{ total: number }>(`SELECT COUNT(*) AS total ${FROM_AUDIENCIA} AND l.read_at IS NULL`, params).total;
     const items = db.all<{ id: string; title: string; createdAt: string; readAt: string | null }>(
       `SELECT n.id, n.title, n.created_at AS createdAt, l.read_at AS readAt ${FROM_AUDIENCIA}
        ORDER BY n.created_at DESC, n.id DESC LIMIT ?`, [...params, limit]);
