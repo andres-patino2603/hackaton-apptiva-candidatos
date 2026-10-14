@@ -6,17 +6,9 @@ import { VistaPagos } from "@/views/Pagos"
 import { VistaNotificaciones } from "@/views/Notificaciones"
 import { VistaContactos } from "@/views/Contactos"
 import { VistaCRM } from "@/views/CRM"
+import { VistaInicio } from "@/views/Inicio"
 
 const queryClient = new QueryClient()
-
-function Placeholder({ titulo }: { titulo: string }) {
-  return (
-    <div>
-      <h1 className="text-2xl font-semibold">{titulo}</h1>
-      <p className="mt-2 text-muted-foreground">Vista en construcción.</p>
-    </div>
-  )
-}
 
 export function App() {
   return (
@@ -24,7 +16,7 @@ export function App() {
       <BrowserRouter>
         <Routes>
           <Route element={<Layout />}>
-            <Route index element={<Placeholder titulo="Inicio" />} />
+            <Route index element={<VistaInicio />} />
             <Route path="ciudades" element={<VistaCiudades />} />
             <Route path="pagos" element={<VistaPagos />} />
             <Route path="notificaciones" element={<VistaNotificaciones />} />
