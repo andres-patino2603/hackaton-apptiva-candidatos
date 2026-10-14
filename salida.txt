@@ -1,0 +1,311 @@
+﻿=== 01-pagos.ts ===
+import { Router } from 'express';
+import type { Db } from '../db.js';
+import { actor, integer, scalar, HttpError } from '../http.js';
+import { readFileSync } from 'node:fs';
+function date(value: unknown): string | null {
+  if (value === undefined) return null;
+  const text = scalar(value);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(text)) throw new HttpError(400, 'Fecha invÃ¡lida');
+  const parsed = new Date(text + 'T00:00:00.000Z');
+  if (!Number.isFinite(parsed.getTime()) || parsed.toISOString().slice(0, 10) !== text) throw new HttpError(400, 'Fecha invÃ¡lida');
+  return text;
+}
+export function pagosRouter(db: Db) {
+  const router = Router();
+  const listSql = readFileSync(new URL('./01-pagos.sql', import.meta.url), 'utf8');
+  const countSql = readFileSync(new URL('./01-pagos-total.sql', import.meta.url), 'utf8');
+  router.get('/historial', (req, res) => {
+    const user = actor(req);
+    if (!['admin', 'analista'].includes(user.role)) throw new HttpError(403, 'Sin acceso al historial');
+    const start = date(req.query.fecha_inicio), end = date(req.query.fecha_fin);
+    if (start && end && start > end) throw new HttpError(400, 'Rango invertido');
+    const client = req.query.cedula_cliente === undefined ? null : scalar(req.query.cedula_cliente);
+    const credit = req.query.id_credito === undefined ? null : scalar(req.query.id_credito);
+    if (client === '' || credit === '') throw new HttpError(400, 'Filtro vacÃ­o');
+    const page = integer(req.query.page, 1, 1, 1000000), limit = integer(req.query.limit, 20);
+    const filters = [start, start, end, end, client, client, credit, credit];
+    const total = db.get<{ total: number }>(countSql, filters).total;
+    const items = db.all(listSql, [...filters, limit, (page - 1) * limit]);
+    res.json({ items, total, page, limit, totalPages: Math.max(1, Math.ceil(total / limit)) });
+  });
+  return router;
+}
+=== 01-pagos.sql ===
+SELECT
+  p.id_pago,
+  p.fecha_pago,
+  cr.id_credito AS id_credito,
+  cl.cedula_cliente AS cedula_cliente,
+  cl.nombre_completo AS nombre_cliente,
+  cr.estado AS estado_credito,
+  p.metodo_pago,
+  COALESCE(NULLIF(TRIM(p.operacion), ''), 'PAGO') AS operacion,
+  CASE
+    WHEN COALESCE(p.valor_total, 0) <> 0 THEN p.valor_total
+    ELSE COALESCE(p.capital, 0) + COALESCE(p.interes, 0) + COALESCE(p.aval, 0)
+       + COALESCE(p.mora, 0) + COALESCE(p.cobranza, 0) + COALESCE(p.abono_extra, 0)
+  END AS valor_total
+FROM pagos p
+LEFT JOIN clientes cl ON cl.cedula_cliente = p.cedula_cliente
+LEFT JOIN creditos cr ON cr.id_credito = p.id_credito
+WHERE p.deleted_at IS NULL
+  AND (? IS NULL OR p.fecha_pago >= ?)
+  AND (? IS NULL OR p.fecha_pago <= ?)
+  AND (? IS NULL OR p.cedula_cliente = ?)
+  AND (? IS NULL OR p.id_credito = ?)
+ORDER BY p.fecha_pago DESC, p.id_pago DESC
+LIMIT ? OFFSET ?;
+=== 01-pagos-total.sql ===
+SELECT COUNT(*) AS total
+FROM pagos p
+WHERE p.deleted_at IS NULL
+  AND (? IS NULL OR p.fecha_pago >= ?)
+  AND (? IS NULL OR p.fecha_pago <= ?)
+  AND (? IS NULL OR p.cedula_cliente = ?)
+  AND (? IS NULL OR p.id_credito = ?);
+=== 02-ciudades.ts ===
+import { Router } from 'express';
+import { scalar } from '../http.js';
+import { cities } from '../fixtures/cities.js';
+
+// Quita mayÃºsculas y tildes: "LÃšMINA" -> "lumina".
+// NFD separa cada letra de su tilde, y luego se borran las tildes sueltas.
+const normalizar = (texto: string) =>
+  texto.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+
+const LIMITE = 20;
+
+export function ciudadesRouter() {
+  const router = Router();
+  router.get('/', (req, res) => {
+    // Ausente o vacÃ­o = filtro desactivado
+    const q = normalizar(scalar(req.query.q) ?? '');
+    const country = normalizar(scalar(req.query.country) ?? '');
+
+    const resultado = cities
+      .filter(c => {
+        const coincideQ =
+          !q ||
+          [c.ascii, c.country, c.countryCode].some(v => normalizar(v).includes(q));
+        const coincidePais =
+          !country ||
+          [c.country, c.countryCode].some(v => normalizar(v).includes(country));
+        return coincideQ && coincidePais; // ambos deben cumplirse
+      })
+      .slice(0, LIMITE); // primero filtrar, despuÃ©s limitar
+
+    res.json(resultado);
+  });
+  return router;
+}
+=== cities.ts (primeras líneas) ===
+// TopÃ³nimos ficticios en orden de catÃ¡logo. No se copia cities.json de Apptiva.
+export const cities = [
+  { id: 'city-1', ascii: 'Lumina', city: 'LÃºmina', country: 'PaÃ­s Ãmbar', countryCode: 'AM' },
+  { id: 'city-2', ascii: 'Puerto Azul', city: 'Puerto Azul', country: 'PaÃ­s Boreal', countryCode: 'BO' },
+  ...Array.from({ length: 23 }, (_, i) => ({ id: `city-${i + 3}`, ascii: `Villa ${String(i + 1).padStart(2, '0')}`, city: `Villa ${String(i + 1).padStart(2, '0')}`, country: 'PaÃ­s Ãmbar', countryCode: 'AM' })),
+  { id: 'city-26', ascii: 'Ultima', city: 'Ãšltima', country: 'PaÃ­s Boreal', countryCode: 'BO' },
+];
+=== 04-notificaciones.ts ===
+import { Router } from 'express';
+import type { Db } from '../db.js';
+import { actor, HttpError, scalar } from '../http.js';
+
+// ---------------------------------------------------------------------------
+// REGLAS COMPARTIDAS (una sola definiciÃ³n para listado, contador, lectura,
+// ocultamiento y operaciones masivas).
+//
+// AUDIENCIA: el aviso participa del centro (center=1) y pertenece al usuario si
+// es general (broadcast=1), o su rol o su correo figuran como destinatarios.
+// EXISTS evita duplicados cuando hay varias coincidencias.
+// ParÃ¡metros: [rol, correo]
+const AUDIENCIA = `n.center=1 AND (n.broadcast=1 OR EXISTS (
+  SELECT 1 FROM destinatarios d WHERE d.notification_id=n.id
+  AND ((d.tipo='role' AND d.valor=?) OR (d.tipo='user' AND d.valor=?))))`;
+
+// VISIBLES: audiencia + estado propio del usuario (lecturas filtrada por su
+// correo) + no oculta por Ã©l. ParÃ¡metros: [correo, rol, correo]
+const VISIBLES = `FROM notificaciones n
+  LEFT JOIN lecturas l ON l.notification_id=n.id AND l.user_email=?
+  WHERE ${AUDIENCIA} AND l.hidden_at IS NULL`;
+
+type Actor = { role: string; email: string };
+const paramsVisibles = (u: Actor) => [u.email, u.role, u.email];
+
+// Una fila en lecturas siempre tiene read_at, asÃ­ que "sin fila" o
+// "read_at nulo" significa no leÃ­da.
+const NO_LEIDA = 'AND l.read_at IS NULL';
+
+// Garantiza que el aviso existe y pertenece a la audiencia del usuario
+// (estÃ© o no oculto por Ã©l). Si no, 404 sin efectos.
+function exigirAudiencia(db: Db, u: Actor, id: string) {
+  const fila = db.get(
+    `SELECT n.id FROM notificaciones n WHERE n.id=? AND ${AUDIENCIA}`,
+    [id, u.role, u.email],
+  );
+  if (!fila) throw new HttpError(404, 'NotificaciÃ³n no encontrada');
+}
+
+// Crea la fila propia (leÃ­da ahora) solo si no existÃ­a; nunca pisa fechas.
+function asegurarLectura(db: Db, u: Actor, id: string, now: string) {
+  db.run(
+    'INSERT OR IGNORE INTO lecturas(notification_id,user_email,read_at,hidden_at) VALUES(?,?,?,NULL)',
+    [id, u.email, now],
+  );
+}
+
+// Oculta solo para el usuario, conservando read_at previo y la primera
+// fecha de ocultamiento.
+function ocultar(db: Db, u: Actor, id: string, now: string) {
+  asegurarLectura(db, u, id, now);
+  db.run(
+    'UPDATE lecturas SET hidden_at=? WHERE notification_id=? AND user_email=? AND hidden_at IS NULL',
+    [now, id, u.email],
+  );
+}
+
+export function notificacionesRouter(db: Db) {
+  const router = Router();
+
+  router.get('/', (req, res) => {
+    const user = actor(req), value = scalar(req.query.limit, '50');
+    if (!/^-?\d+$/.test(value)) throw new HttpError(400, 'LÃ­mite invÃ¡lido');
+    const limit = Math.min(100, Math.max(1, Number(value)));
+
+    const items = db.all(
+      `SELECT n.id, n.title, n.created_at AS createdAt, l.read_at AS readAt
+       ${VISIBLES}
+       ORDER BY n.created_at DESC, n.id DESC LIMIT ?`,
+      [...paramsVisibles(user), limit],
+    );
+    // El contador consulta toda la audiencia visible, sin depender del lÃ­mite.
+    const conteo = db.get<{ n: number }>(
+      `SELECT COUNT(*) AS n ${VISIBLES} ${NO_LEIDA}`,
+      paramsVisibles(user),
+    );
+    res.json({ items, unreadCount: conteo?.n ?? 0 });
+  });
+
+  router.patch('/:id/read', (req, res) => {
+    const user = actor(req), id = req.params.id, now = new Date().toISOString();
+    let readAt = now;
+    db.transaction(() => {
+      exigirAudiencia(db, user, id);
+      asegurarLectura(db, user, id, now); // no sobrescribe ni des-oculta
+      const fila = db.get<{ read_at: string }>(
+        'SELECT read_at FROM lecturas WHERE notification_id=? AND user_email=?',
+        [id, user.email],
+      );
+      readAt = fila!.read_at; // conserva la primera fecha
+    });
+    res.json({ id, readAt });
+  });
+
+  router.delete('/:id', (req, res) => {
+    const user = actor(req), id = req.params.id, now = new Date().toISOString();
+    let hiddenAt = now;
+    db.transaction(() => {
+      exigirAudiencia(db, user, id);
+      ocultar(db, user, id, now);
+      const fila = db.get<{ hidden_at: string }>(
+        'SELECT hidden_at FROM lecturas WHERE notification_id=? AND user_email=?',
+        [id, user.email],
+      );
+      hiddenAt = fila!.hidden_at; // conserva la primera fecha
+    });
+    res.json({ id, hiddenAt });
+  });
+
+  router.post('/read-all', (req, res) => {
+    const user = actor(req), now = new Date().toISOString();
+    let updated = 0;
+    db.transaction(() => {
+      const pendientes = db.all<{ id: string }>(
+        `SELECT n.id ${VISIBLES} ${NO_LEIDA}`,
+        paramsVisibles(user),
+      );
+      for (const p of pendientes) asegurarLectura(db, user, p.id, now);
+      updated = pendientes.length; // solo cambios reales
+    });
+    res.json({ updated });
+  });
+
+  router.post('/clear', (req, res) => {
+    const user = actor(req), now = new Date().toISOString();
+    let updated = 0;
+    db.transaction(() => {
+      const visibles = db.all<{ id: string }>(
+        `SELECT n.id ${VISIBLES}`,
+        paramsVisibles(user),
+      );
+      for (const v of visibles) ocultar(db, user, v.id, now);
+      updated = visibles.length; // solo los que estaban visibles
+    });
+    res.json({ updated });
+  });
+
+  return router;
+}
+=== CONTRATO secciones 1 y 2 ===
+# Contrato pÃºblico del laboratorio
+
+Todas las respuestas son JSON. Los errores devuelven `{"error":"texto"}`; no se compara el texto exacto. Los cuerpos vÃ¡lidos son objetos JSON. Los timestamps son ISO 8601 UTC. Los IDs nuevos son cadenas Ãºnicas y no tienen un formato obligatorio. Campos no reconocidos del cuerpo pueden ignorarse; solo se escriben los campos descritos aquÃ­.
+
+## Identidad y validaciones comunes
+
+Solo `/cities` y `/health` son pÃºblicos. En las demÃ¡s rutas envÃ­a `x-user`:
+
+| Valor | Rol | Correo ficticio |
+|---|---|---|
+| admin | admin | admin@example.test |
+| asesor-a | asesor | a@example.test |
+| asesor-b | asesor | b@example.test |
+| analista | analista | analista@example.test |
+
+La infraestructura elimina espacios exteriores y convierte el header a minÃºsculas. Usuario ausente/desconocido: **401**. No implementes Supabase ni JWT. Los parÃ¡metros de consulta deben ser textos Ãºnicos; repetidos o estructurados devuelven **400**. Los enteros no admiten decimales ni fragmentos SQL. Errores de validaciÃ³n no deben modificar datos.
+
+## 1. GET /pagos/historial
+
+Acceso: admin o analista. Un asesor recibe **403**; identidad ausente/desconocida, **401**. La ruta, validaciÃ³n y formato envolvente estÃ¡n implementados; completa las dos consultas SQL.
+
+Filtros opcionales: `fecha_inicio` y `fecha_fin` como fechas de calendario vÃ¡lidas `YYYY-MM-DD`, inclusivas; `cedula_cliente` e `id_credito` como coincidencias exactas, no vacÃ­os. Combinar todos con AND. Rango invertido, fecha imposible, parÃ¡metros repetidos o estructurados: **400**. Las fechas del laboratorio no tienen hora. `page` entero 1..1000000, defecto 1; `limit` entero 1..100, defecto 20. Fuera del rango o no entero: **400**.
+
+Respuesta **200**: `{items,total,page,limit,totalPages}`. Excluir pagos con `deleted_at` no nulo. Orden `fecha_pago DESC,id_pago DESC`. Calcular `total` con todos los filtros antes de paginar. `totalPages = max(1,ceil(total/limit))`. Una pÃ¡gina fuera de rango devuelve items vacÃ­o y conserva total; cero coincidencias devuelve total 0 y totalPages 1.
+
+Cada item contiene exactamente `{id_pago,fecha_pago,id_credito,cedula_cliente,nombre_cliente,estado_credito,metodo_pago,operacion,valor_total}`. Obtener `nombre_cliente` de `clientes` y `estado_credito` de `creditos`; conservar pagos sin esas relaciones, devolviendo los campos relacionados como null. Los IDs de relaciÃ³n de esos pagos tambiÃ©n son null.
+
+`operacion` nula o vacÃ­a se devuelve como `PAGO`. `valor_total` registrado distinto de cero tiene prioridad; si es nulo o cero, sumar `capital`, `interes`, `aval`, `mora`, `cobranza` y `abono_extra`, tratando null como cero. Todos los importes son nÃºmeros enteros en unidades monetarias ficticias: no se requiere redondeo ni conversiÃ³n de moneda.
+
+SQL: `01-pagos.sql` recibe `[fecha_inicio,fecha_inicio,fecha_fin,fecha_fin,cedula_cliente,cedula_cliente,id_credito,id_credito,limit,offset]`; filtro ausente se envÃ­a como null. `offset=(page-1)*limit`. `01-pagos-total.sql` recibe los primeros ocho parÃ¡metros y debe devolver una Ãºnica fila `{total}` incluso si no hay coincidencias. Resolver relaciones, filtros, orden, paginaciÃ³n, operaciones y monto en SQL parametrizado; no hardcodear los resultados del seed.
+
+Datos pÃºblicos: hay seis pagos activos (IDs 1,2,3,5,6,7) y uno eliminado (4). El ID 5 no tiene cliente ni crÃ©dito; IDs 2 y 3 requieren sumar componentes; ID 1 tiene total registrado distinto de la suma. Consulta `src/seed.sql` para fechas y valores.
+
+Ejemplo: `/pagos/historial?cedula_cliente=DOC-A&limit=2` devuelve IDs `[2,1]`, total 3, page 1, limit 2 y totalPages 2.
+
+## 2. GET /cities
+
+Filtros opcionales `q` y `country`. Ambos ignoran mayÃºsculas y diacrÃ­ticos mediante normalizaciÃ³n Unicode NFD. No se exige eliminar espacios de la bÃºsqueda. Ausente o cadena vacÃ­a desactiva el filtro.
+
+`q` coincide por subcadena con `ascii`, `country` o `countryCode`. `country` coincide por subcadena con `country` o `countryCode`. Si hay ambos, deben cumplirse ambos filtros. Filtra antes de limitar a veinte. Preserva el orden del catÃ¡logo. Respuesta **200**, array de objetos originales `{id,ascii,city,country,countryCode}`. No alteres el catÃ¡logo.
+
+Ejemplo: `/cities?q=%C3%BAltima&country=bo` devuelve Ãºnicamente `city-26`. `/cities?q=lumina&country=bo` devuelve `[]`.
+
+=== schema (pagos, lecturas) ===
+CREATE TABLE clientes (cedula_cliente TEXT PRIMARY KEY, nombre_completo TEXT NOT NULL);
+CREATE TABLE creditos (id_credito TEXT PRIMARY KEY, estado TEXT NOT NULL);
+CREATE TABLE pagos (
+  id_pago INTEGER PRIMARY KEY, fecha_pago TEXT NOT NULL,
+  cedula_cliente TEXT REFERENCES clientes(cedula_cliente), id_credito TEXT REFERENCES creditos(id_credito),
+  metodo_pago TEXT NOT NULL, operacion TEXT, valor_total INTEGER,
+  capital INTEGER, interes INTEGER, aval INTEGER, mora INTEGER, cobranza INTEGER, abono_extra INTEGER,
+  deleted_at TEXT
+);
+CREATE INDEX pagos_fecha ON pagos(fecha_pago DESC,id_pago DESC);
+CREATE TABLE agencias (id INTEGER PRIMARY KEY, nombre TEXT NOT NULL, advisor_id TEXT, deleted_at TEXT);
+CREATE TABLE lecturas (
+  notification_id TEXT NOT NULL REFERENCES notificaciones(id), user_email TEXT NOT NULL,
+  read_at TEXT NOT NULL, hidden_at TEXT, PRIMARY KEY(notification_id,user_email)
+);
+CREATE TABLE crm_registros (id TEXT PRIMARY KEY, nombre TEXT NOT NULL, responsable_id TEXT, deleted_at TEXT);
+CREATE TABLE crm_actividades (

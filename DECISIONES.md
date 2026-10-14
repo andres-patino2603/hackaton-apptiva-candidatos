@@ -5,7 +5,8 @@ Nombre o identificador del participante:
 ## Estado de cada caso
 
 | Caso | Completo/parcial | Comprobaciones | Pendiente |
-|---|---|---|---|
+|---|---|---|---
+|
 | Historial SQL | | | |
 | Ciudades | | | |
 | Directorio | | | |

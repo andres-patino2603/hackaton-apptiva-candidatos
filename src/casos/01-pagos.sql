@@ -1,3 +1,24 @@
--- CASO 1: implementar filtros, relaciones, total y paginación según CONTRATO.md.
--- Consultas pendientes; la ruta y validaciones ya están implementadas.
-SELECT id_pago FROM pagos WHERE 1=0 AND (? IS NULL OR ? IS NOT NULL OR ? IS NULL OR ? IS NOT NULL OR ? IS NULL OR ? IS NOT NULL OR ? IS NULL OR ? IS NOT NULL) LIMIT ? OFFSET ?;
+SELECT
+  p.id_pago,
+  p.fecha_pago,
+  cr.id_credito AS id_credito,
+  cl.cedula_cliente AS cedula_cliente,
+  cl.nombre_completo AS nombre_cliente,
+  cr.estado AS estado_credito,
+  p.metodo_pago,
+  COALESCE(NULLIF(TRIM(p.operacion), ''), 'PAGO') AS operacion,
+  CASE
+    WHEN COALESCE(p.valor_total, 0) <> 0 THEN p.valor_total
+    ELSE COALESCE(p.capital, 0) + COALESCE(p.interes, 0) + COALESCE(p.aval, 0)
+       + COALESCE(p.mora, 0) + COALESCE(p.cobranza, 0) + COALESCE(p.abono_extra, 0)
+  END AS valor_total
+FROM pagos p
+LEFT JOIN clientes cl ON cl.cedula_cliente = p.cedula_cliente
+LEFT JOIN creditos cr ON cr.id_credito = p.id_credito
+WHERE p.deleted_at IS NULL
+  AND (? IS NULL OR p.fecha_pago >= ?)
+  AND (? IS NULL OR p.fecha_pago <= ?)
+  AND (? IS NULL OR p.cedula_cliente = ?)
+  AND (? IS NULL OR p.id_credito = ?)
+ORDER BY p.fecha_pago DESC, p.id_pago DESC
+LIMIT ? OFFSET ?;
