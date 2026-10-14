@@ -1,21 +1,29 @@
 import { Router } from 'express';
 import type { Db } from '../db.js';
-import { actor, HttpError, scalar } from '../http.js';
+import { actor, HttpError, scalar, type Actor } from '../http.js';
 // CASO 4: módulo legado didáctico con errores introducidos intencionalmente.
 // Corrige el comportamiento y extrae las reglas compartidas sin cambiar la API.
+const FROM_AUDIENCIA = `FROM notificaciones n
+  LEFT JOIN lecturas l ON l.notification_id = n.id AND l.user_email = ?
+  WHERE n.center = 1 AND l.hidden_at IS NULL
+    AND (n.broadcast = 1 OR EXISTS (
+      SELECT 1 FROM destinatarios d WHERE d.notification_id = n.id
+      AND ((d.tipo = 'role' AND d.valor = ?) OR (d.tipo = 'user' AND d.valor = ?))))`;
+function paramsAudiencia(user: Actor): [string, string, string] {
+  return [user.email, user.role, user.email];
+}
 export function notificacionesRouter(db: Db) {
   const router = Router();
   router.get('/', (req, res) => {
     const user = actor(req), value = scalar(req.query.limit, '50');
     if (!/^-?\d+$/.test(value)) throw new HttpError(400, 'Límite inválido');
     const limit = Math.min(100, Math.max(1, Number(value)));
-    const items = db.all(`SELECT n.id,n.title,n.created_at AS createdAt,l.read_at AS readAt
-      FROM notificaciones n LEFT JOIN lecturas l ON l.notification_id=n.id
-      WHERE n.center=1 AND l.hidden_at IS NULL AND (n.broadcast=1 OR EXISTS(
-        SELECT 1 FROM destinatarios d WHERE d.notification_id=n.id
-        AND ((d.tipo='role' AND d.valor=?) OR (d.tipo='user' AND d.valor=?))))
-      ORDER BY n.created_at DESC LIMIT ?`, [user.role,user.email,limit]);
-    res.json({ items, unreadCount:items.filter(n => !n.readAt).length });
+    const params = paramsAudiencia(user);
+    const unreadCount = db.get<{ total: number }>(`SELECT COUNT(*) AS total ${FROM_AUDIENCIA}`, params).total;
+    const items = db.all<{ id: string; title: string; createdAt: string; readAt: string | null }>(
+      `SELECT n.id, n.title, n.created_at AS createdAt, l.read_at AS readAt ${FROM_AUDIENCIA}
+       ORDER BY n.created_at DESC, n.id DESC LIMIT ?`, [...params, limit]);
+    res.json({ items, unreadCount });
   });
   router.patch('/:id/read', (req, res) => {
     const user = actor(req), now = new Date().toISOString();
