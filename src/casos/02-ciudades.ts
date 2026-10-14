@@ -4,6 +4,7 @@ import { Router } from 'express';
 import { scalar } from '../http.js';
 import { cities } from '../fixtures/cities.js';
 
+// Normaliza texto para ignorar tildes y mayusculas en las comparaciones.
 function normalize(value: string): string {
   return value.normalize('NFD').replace(/\p{M}/gu, '').toLowerCase();
 }

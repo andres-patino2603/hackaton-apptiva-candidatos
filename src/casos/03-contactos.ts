@@ -36,6 +36,8 @@ function esObjetoPlano(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
+// Valida un body plano y normaliza nombre, correo y telefono.
+// Se comparte entre POST y PATCH para aplicar las mismas reglas.
 function normalizarContacto(body: unknown): { nombre_completo: string; correo: string | null; telefono: string | null } {
   if (!esObjetoPlano(body)) throw new HttpError(400, 'Cuerpo inválido');
 
@@ -80,6 +82,8 @@ function normalizarContacto(body: unknown): { nombre_completo: string; correo: s
   return { nombre_completo: nombre, correo, telefono };
 }
 
+// Valida ID, permisos, existencia y baja logica de la agencia.
+// Se llama en todas las rutas del directorio.
 function cargarAgencia(db: Db, param: unknown, user: ReturnType<typeof actor>) {
   const texto = scalar(param);
   if (!/^\d+$/.test(texto)) throw new HttpError(400, 'ID de agencia inválido');
@@ -96,6 +100,8 @@ function cargarAgencia(db: Db, param: unknown, user: ReturnType<typeof actor>) {
   return { id, agencia };
 }
 
+// Busca otros contactos activos de la misma agencia con mismo correo o telefono.
+// Null no coincide y se excluye el propio ID.
 function buscarCoincidencias(db: Db, idAgencia: number, correo: string | null, telefono: string | null, excluirId: string) {
   return db.all<{ id: string; nombre_completo: string }>(
     `SELECT id, nombre_completo

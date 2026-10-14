@@ -11,6 +11,7 @@ function esObjetoPlano(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
+// Valida el formato UTC canonico y el round-trip con toISOString.
 function validarFechaCanonical(value: string): string {
   if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/.test(value)) throw new HttpError(400, 'Fecha inválida');
   const parsed = new Date(value);
@@ -18,6 +19,8 @@ function validarFechaCanonical(value: string): string {
   return value;
 }
 
+// Valida todo el body antes de la transaccion.
+// Distingue campos ausentes de null y rechaza datos invalidos.
 function validarCuerpo(body: unknown): {
   tipo: string;
   resultado: string;
@@ -101,6 +104,7 @@ export function actividadesRouter(db: Db) {
       tituloFinal = datos.proxima_accion;
     }
 
+    // Una sola transaccion: actividad, su evento y, si aplica, tarea + evento.
     db.transaction(() => {
       db.run(
         `INSERT INTO crm_actividades (id, registro_id, tipo, resultado, detalle, fecha, actor_id)

@@ -4,17 +4,20 @@ import { Router } from 'express';
 import type { Db } from '../db.js';
 import { actor, HttpError, scalar } from '../http.js';
 
+// Audiencia: el aviso es para el usuario por broadcast, rol o correo.
 const AUDIENCIA = `n.center = 1 AND (n.broadcast = 1 OR EXISTS (
   SELECT 1 FROM destinatarios d
   WHERE d.notification_id = n.id
     AND ((d.tipo = 'role' AND d.valor = ?) OR (d.tipo = 'user' AND d.valor = ?))
 ))`;
 
+// Condicion para saber si el usuario oculto este aviso.
 const OCULTA = `EXISTS (
   SELECT 1 FROM lecturas hx
   WHERE hx.notification_id = n.id AND hx.user_email = ? AND hx.hidden_at IS NOT NULL
 )`;
 
+// Visible: esta en la audiencia y no fue ocultado por el usuario.
 const VISIBLE = `${AUDIENCIA} AND NOT ${OCULTA}`;
 
 export function notificacionesRouter(db: Db) {
