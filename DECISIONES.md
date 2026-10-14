@@ -1,6 +1,6 @@
 # Decisiones y comprobaciones de mi entrega
 
-Nombre o identificador del participante: [escribe aquí tu nombre]
+Nombre o identificador del participante: yeison andres salas sarmiento 
 
 ## Estado de cada caso
 
