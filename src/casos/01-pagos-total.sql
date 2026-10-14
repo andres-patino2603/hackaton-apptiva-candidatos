@@ -1,3 +1,9 @@
--- CASO 1: implementar filtros, relaciones, total y paginación según CONTRATO.md.
--- Consultas pendientes; la ruta y validaciones ya están implementadas.
-SELECT 0 AS total WHERE ? IS NULL OR ? IS NOT NULL OR ? IS NULL OR ? IS NOT NULL OR ? IS NULL OR ? IS NOT NULL OR ? IS NULL OR ? IS NOT NULL;
+SELECT COUNT(*) AS total
+FROM pagos p
+LEFT JOIN clientes c ON c.cedula_cliente = p.cedula_cliente
+LEFT JOIN creditos cr ON cr.id_credito = p.id_credito
+WHERE p.deleted_at IS NULL
+  AND (? IS NULL OR p.fecha_pago >= ?)
+  AND (? IS NULL OR p.fecha_pago <= ?)
+  AND (? IS NULL OR p.cedula_cliente = ?)
+  AND (? IS NULL OR p.id_credito = ?);
