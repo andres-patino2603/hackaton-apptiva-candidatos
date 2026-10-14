@@ -40,6 +40,14 @@ function normTelefono(value: unknown): string | null {
   const resultado = limpio.startsWith('+') ? '+' + limpio.slice(1).replace(/\+/g, '') : limpio.replace(/\+/g, '');
   return resultado === '' ? null : resultado;
 }
+type Coincidencia = { id: string; nombre_completo: string };
+function findCoincidencias(db: Db, idAgencia: number, correo: string | null, telefono: string | null, excluirId: string | null): Coincidencia[] {
+  return db.all<Coincidencia>(
+    `SELECT id, nombre_completo FROM contactos
+     WHERE id_agencia = ? AND deleted_at IS NULL AND id != ?
+       AND ((? IS NOT NULL AND correo = ?) OR (? IS NOT NULL AND telefono = ?))`,
+    [idAgencia, excluirId ?? '', correo, correo, telefono, telefono]);
+}
 export function contactosRouter(_db: Db) {
   const router = Router();
   router.use((req, res) => {
