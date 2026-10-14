@@ -10,6 +10,23 @@ function date(value: unknown): string | null {
   if (!Number.isFinite(parsed.getTime()) || parsed.toISOString().slice(0, 10) !== text) throw new HttpError(400, 'Fecha inválida');
   return text;
 }
+type Cursor = { fecha: string; id: number };
+function decodeCursor(value: unknown): Cursor | null {
+  if (value === undefined) return null;
+  const text = scalar(value);
+  if (text === '') throw new HttpError(400, 'Cursor inválido');
+  let decoded: string;
+  try { decoded = Buffer.from(text, 'base64url').toString('utf8'); }
+  catch { throw new HttpError(400, 'Cursor inválido'); }
+  const match = /^(\d{4}-\d{2}-\d{2})\|(\d+)$/.exec(decoded);
+  if (!match) throw new HttpError(400, 'Cursor inválido');
+  const id = Number(match[2]);
+  if (!Number.isSafeInteger(id) || id < 1) throw new HttpError(400, 'Cursor inválido');
+  return { fecha: match[1], id };
+}
+function encodeCursor(fecha: string, id: number): string {
+  return Buffer.from(`${fecha}|${id}`, 'utf8').toString('base64url');
+}
 export function pagosRouter(db: Db) {
   const router = Router();
   const listSql = readFileSync(new URL('./01-pagos.sql', import.meta.url), 'utf8');
