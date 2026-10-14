@@ -47,5 +47,13 @@ export function httpLab() {
       const data = await response.json();
       return { status: response.status, data };
     },
+    requestFull: async (path: string, method = 'GET', body?: unknown, user: string | null = 'admin') => {
+      const response = await fetch(baseUrl + path, {
+        method, headers: { ...(user ? { 'x-user': user } : {}), ...(body !== undefined ? { 'content-type': 'application/json' } : {}) },
+        body: body === undefined ? undefined : JSON.stringify(body), signal: AbortSignal.timeout(5000),
+      });
+      const data = await response.json();
+      return { status: response.status, data, headers: response.headers };
+    },
   };
 }

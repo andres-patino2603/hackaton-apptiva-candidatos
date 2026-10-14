@@ -31,6 +31,7 @@ export function pagosRouter(db: Db) {
   const router = Router();
   const listSql = readFileSync(new URL('./01-pagos.sql', import.meta.url), 'utf8');
   const countSql = readFileSync(new URL('./01-pagos-total.sql', import.meta.url), 'utf8');
+  const cursorSql = readFileSync(new URL('./01-pagos-cursor.sql', import.meta.url), 'utf8');
   router.get('/historial', (req, res) => {
     const user = actor(req);
     if (!['admin', 'analista'].includes(user.role)) throw new HttpError(403, 'Sin acceso al historial');
@@ -40,9 +41,26 @@ export function pagosRouter(db: Db) {
     const credit = req.query.id_credito === undefined ? null : scalar(req.query.id_credito);
     if (client === '' || credit === '') throw new HttpError(400, 'Filtro vacío');
     const page = integer(req.query.page, 1, 1, 1000000), limit = integer(req.query.limit, 20);
+    const cursor = decodeCursor(req.query.cursor);
     const filters = [start, start, end, end, client, client, credit, credit];
     const total = db.get<{ total: number }>(countSql, filters).total;
-    const items = db.all(listSql, [...filters, limit, (page - 1) * limit]);
+    if (cursor) {
+      const items = db.all<{ fecha_pago: string; id_pago: number }>(
+        cursorSql, [cursor.fecha, cursor.fecha, cursor.id, ...filters, limit + 1]);
+      const hayMas = items.length > limit;
+      const pagina = hayMas ? items.slice(0, limit) : items;
+      if (hayMas) {
+        const ultimo = pagina[pagina.length - 1];
+        res.setHeader('X-Next-Cursor', encodeCursor(ultimo.fecha_pago, ultimo.id_pago));
+      }
+      res.json({ items: pagina, total, page, limit, totalPages: Math.max(1, Math.ceil(total / limit)) });
+      return;
+    }
+    const items = db.all<{ fecha_pago: string; id_pago: number }>(listSql, [...filters, limit, (page - 1) * limit]);
+    if (items.length === limit) {
+      const ultimo = items[items.length - 1];
+      res.setHeader('X-Next-Cursor', encodeCursor(ultimo.fecha_pago, ultimo.id_pago));
+    }
     res.json({ items, total, page, limit, totalPages: Math.max(1, Math.ceil(total / limit)) });
   });
   return router;
