@@ -1,5 +1,14 @@
 ﻿// Caso 4: centro de notificaciones.
-// Audiencia y visible centralizadas; una accion por usuario, idempotente.
+// Guia rapida:
+// - AUDIENCIA: aviso para el usuario por broadcast, rol o correo.
+// - OCULTA: el usuario ya lo oculto.
+// - VISIBLE: esta en la audiencia y no esta oculto.
+// - GET '/': lista visibles con limit y unreadCount independiente.
+// - PATCH '/:id/read': crea la primera fecha de lectura sin revertir ocultamiento.
+// - DELETE '/:id': oculta solo para el actor y marca leido si no existia.
+// - POST '/read-all': marca como leidos los visibles no leidos.
+// - POST '/clear': oculta todos los visibles para el actor.
+// - Todos los cambios por usuario se guardan en lecturas, nunca en notificaciones.
 import { Router } from 'express';
 import type { Db } from '../db.js';
 import { actor, HttpError, scalar } from '../http.js';

@@ -1,5 +1,12 @@
 // Caso 2: buscador de ciudades.
-// Filtra antes de limitar a 20, normaliza con NFD y combina q + country con AND.
+// Guia rapida:
+// - normalize(): elimina tildes/marcas y pasa a minusculas.
+// - GET '/': lee q y country; si vienen vacios, desactiva cada filtro.
+// - Filtra todo el catalogo antes de aplicar slice(0, 20).
+// - q busca por subcadena en ascii, country y countryCode.
+// - country busca por subcadena en country y countryCode.
+// - Si ambos filtros vienen, deben cumplirse (AND).
+// - cities y sus objetos originales no se mutan.
 import { Router } from 'express';
 import { scalar } from '../http.js';
 import { cities } from '../fixtures/cities.js';

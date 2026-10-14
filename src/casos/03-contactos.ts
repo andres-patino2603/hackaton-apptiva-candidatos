@@ -1,5 +1,14 @@
 ﻿// Caso 3: directorio de contactos por agencia.
-// Valida agencia/permisos, normaliza datos, registra eventos y es idempotente.
+// Guia rapida:
+// - cargarAgencia(): valida ID 1..1000000, rol, existencia/no eliminacion y propiedad.
+// - normalizarContacto(): valida objeto plano y normaliza nombre, correo y telefono.
+// - GET '/:agencia/asesores': lista activos o eliminados, con filtros antes de paginar.
+// - POST: crea contacto y evento 'creacion' en una transaccion.
+// - PATCH '/:id': reemplaza los campos, actualiza updated_by y registra 'actualizacion'.
+// - DELETE '/:id': baja logica idempotente con evento 'baja' solo si cambia estado.
+// - PATCH '/:id/restaurar': restaura conservando ID y registra 'restauracion'.
+// - GET '/:id/historial': devuelve eventos ordenados por fecha e ID, con JSON parseado.
+// - buscarCoincidencias(): otros contactos activos de la misma agencia con mismo correo o telefono.
 import { Router } from 'express';
 import type { Db } from '../db.js';
 import { actor, HttpError, scalar, integer } from '../http.js';

@@ -1,5 +1,12 @@
 ﻿// Caso 5: actividad comercial y proxima accion.
-// Valida body completo antes de una transaccion atomica.
+// Guia rapida:
+// - actor/rol desde identidad; analista no tiene acceso.
+// - Verifica registro activo y propiedad del asesor o admin.
+// - validarCuerpo(): valida tipo, resultado, detalle, fecha y proxima_accion/vence_at.
+// - Distingue campos ausentes de null.
+// - db.transaction(): actividad, evento actividad y, si aplica, tarea y evento tarea_creada.
+// - Responsable de tarea: responsable del registro o, si es null, el actor.
+// - Responde 201 con actividad y tarea (null si no hay proxima accion).
 import { Router } from 'express';
 import type { Db } from '../db.js';
 import { actor, HttpError } from '../http.js';
